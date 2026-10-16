@@ -82,7 +82,7 @@ loginForm.addEventListener('submit', async (event) => {
     localStorage.setItem('agendaStyleUser', JSON.stringify(data.user));
     loginForm.querySelector('.submit-button').classList.add('success');
     showMessage('Sesión iniciada. Cargando tu agenda…', 'success');
-    setTimeout(() => { window.location.href = 'index.html'; }, 700);
+    setTimeout(() => { window.location.href = 'dashboard.html'; }, 700);
   } catch (error) {
     showMessage(error.message);
     showToast('No fue posible iniciar sesión.');
