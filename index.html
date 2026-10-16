@@ -2,106 +2,15 @@
 <html lang="es">
   <head>
     <meta charset="UTF-8" />
+    <meta http-equiv="refresh" content="0; url=auth.html" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>AgendaStyle · Panel de citas</title>
-    <link rel="icon" type="image/png" href="favicon.png" />
-    <link rel="preconnect" href="https://fonts.googleapis.com" />
-    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
-    <link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700&family=Manrope:wght@600;700;800&display=swap" rel="stylesheet" />
-    <link rel="stylesheet" href="styles.css" />
+    <title>AgendaStyle · Acceso</title>
+    <script>
+      window.location.replace('auth.html');
+    </script>
   </head>
   <body>
-    <div class="app-shell">
-      <aside class="sidebar">
-        <div class="brand">
-          <img class="brand-logo" src="Agendastyle_logo.png" alt="AgendaStyle" />
-        </div>
-
-        <nav class="main-nav" aria-label="Navegación principal">
-          <p class="nav-label">MENÚ PRINCIPAL</p>
-          <a class="nav-item active" href="#inicio"><span class="nav-icon">⌂</span>Inicio</a>
-          <a class="nav-item" href="#agenda"><span class="nav-icon">▦</span>Agenda <b class="nav-count">8</b></a>
-          <a class="nav-item" href="#clientes"><span class="nav-icon">♙</span>Clientes</a>
-          <a class="nav-item" href="#equipo"><span class="nav-icon">♧</span>Equipo</a>
-          <a class="nav-item" href="#servicios"><span class="nav-icon">✦</span>Servicios</a>
-          <p class="nav-label space-top">GESTIÓN</p>
-          <a class="nav-item" href="#reportes"><span class="nav-icon">▥</span>Reportes</a>
-          <a class="nav-item" href="#configuracion"><span class="nav-icon">⚙</span>Configuración</a>
-        </nav>
-
-        <div class="sidebar-footer">
-          <div class="help-icon">?</div>
-          <div><strong>¿Necesitas ayuda?</strong><small>Consulta el centro de soporte</small></div>
-          <span>›</span>
-        </div>
-      </aside>
-
-      <main class="main-content" id="inicio">
-        <header class="topbar">
-          <button class="mobile-menu" aria-label="Abrir menú">☰</button>
-          <div class="breadcrumb"><span>Inicio</span><i>/</i><strong>Resumen</strong></div>
-          <div class="top-actions">
-            <button class="icon-button notification" aria-label="Notificaciones">♧<span></span></button>
-            <div class="user-profile"><div class="user-avatar" id="user-avatar">HS</div><div><strong id="user-name">Hemer Santiago</strong><small id="user-role">Administrador</small></div><span class="chevron">⌄</span></div>
-            <button class="logout-button" id="logout-button" type="button">Cerrar sesión</button>
-          </div>
-        </header>
-
-        <section class="content-wrap">
-          <div class="welcome-row">
-            <div>
-              <p class="eyebrow">JUEVES, 10 DE SEPTIEMBRE DE 2026</p>
-              <h1>Buenos días, <span id="welcome-name">Hemer</span></h1>
-              <p class="subheading" id="business-summary">Aquí tienes el resumen de tu negocio para hoy.</p>
-            </div>
-            <button class="primary-button" id="open-modal"><span>＋</span> Nueva cita</button>
-          </div>
-
-          <section class="stats-grid" aria-label="Resumen del día">
-            <article class="stat-card"><div class="stat-top"><span class="stat-icon blue">▦</span><span class="trend positive">+12.5%</span></div><p>Citas de hoy</p><strong>24</strong><small>vs. 21 el jueves pasado</small></article>
-            <article class="stat-card"><div class="stat-top"><span class="stat-icon green">✓</span><span class="trend positive">+8.2%</span></div><p>Ingresos estimados</p><strong>$ 1.280.000</strong><small>Con 18 citas confirmadas</small></article>
-            <article class="stat-card"><div class="stat-top"><span class="stat-icon orange">◷</span><span class="trend neutral">En curso</span></div><p>Próxima cita</p><strong>10:30 <em>AM</em></strong><small>Camila Rojas · Corte + cepillado</small></article>
-            <article class="stat-card"><div class="stat-top"><span class="stat-icon purple">♙</span><span class="trend positive">+5 nuevos</span></div><p>Clientes registrados</p><strong>186</strong><small>Este mes</small></article>
-          </section>
-
-          <div class="section-heading"><div><h2>Agenda de hoy</h2><p>Jueves, 10 de septiembre · 8:00 AM — 7:00 PM</p></div><a href="#agenda" class="view-all">Ver agenda completa <span>→</span></a></div>
-
-          <section class="dashboard-grid" id="agenda">
-            <article class="panel calendar-panel">
-              <div class="panel-header"><div><h3>Calendario</h3><p>Septiembre 2026</p></div><div class="calendar-controls"><button aria-label="Mes anterior">‹</button><button aria-label="Mes siguiente">›</button></div></div>
-              <div class="weekdays"><span>LUN</span><span>MAR</span><span>MIÉ</span><span>JUE</span><span>VIE</span><span>SÁB</span><span>DOM</span></div>
-              <div class="calendar-grid">
-                <span class="muted">31</span><span>1</span><span>2</span><span>3</span><span>4</span><span>5</span><span>6</span>
-                <span>7</span><span>8</span><span>9</span><span class="selected">10<i></i></span><span>11</span><span>12<i></i></span><span>13</span>
-                <span>14</span><span>15</span><span>16</span><span>17</span><span>18</span><span>19</span><span>20</span>
-                <span>21</span><span>22</span><span>23</span><span>24</span><span>25</span><span>26</span><span>27</span>
-                <span>28</span><span>29</span><span>30</span><span class="muted">1</span><span class="muted">2</span><span class="muted">3</span><span class="muted">4</span>
-              </div>
-              <div class="calendar-legend"><span><i class="dot blue-dot"></i>Con citas</span><span><i class="dot green-dot"></i>Hoy</span></div>
-            </article>
-
-            <article class="panel appointment-panel">
-              <div class="panel-header"><div><h3>Próximas citas</h3><p>Tu agenda para hoy</p></div><button class="filter-button">Todas <span>⌄</span></button></div>
-              <div class="appointment-list">
-                <div class="appointment"><div class="time"><strong>09:00</strong><small>AM</small></div><div class="appointment-line blue-line"></div><div class="client-avatar coral">CR</div><div class="appointment-info"><strong>Camila Rojas</strong><span>Corte + cepillado · Laura M.</span></div><span class="status confirmed">Confirmada</span></div>
-                <div class="appointment"><div class="time"><strong>10:30</strong><small>AM</small></div><div class="appointment-line green-line"></div><div class="client-avatar violet">JL</div><div class="appointment-info"><strong>Juan David López</strong><span>Corte clásico · Andrés P.</span></div><span class="status confirmed">Confirmada</span></div>
-                <div class="appointment"><div class="time"><strong>12:00</strong><small>PM</small></div><div class="appointment-line orange-line"></div><div class="client-avatar yellow">MV</div><div class="appointment-info"><strong>María Valentina</strong><span>Coloración · Laura M.</span></div><span class="status pending">Pendiente</span></div>
-                <div class="appointment"><div class="time"><strong>02:30</strong><small>PM</small></div><div class="appointment-line pink-line"></div><div class="client-avatar blue-avatar">SC</div><div class="appointment-info"><strong>Santiago Castro</strong><span>Barba + corte · Andrés P.</span></div><span class="status confirmed">Confirmada</span></div>
-              </div>
-            </article>
-          </section>
-
-          <section class="bottom-grid">
-            <article class="panel compact-panel" id="equipo"><div class="panel-header"><div><h3>Equipo disponible</h3><p>Estado de tus estilistas</p></div><a href="#equipo" class="text-link">Ver equipo →</a></div><div class="team-list"><div class="team-member"><div class="team-avatar laura">LM<span></span></div><div><strong>Laura Martínez</strong><small>Estilista senior</small></div><em>Disponible</em></div><div class="team-member"><div class="team-avatar andres">AP<span></span></div><div><strong>Andrés Pérez</strong><small>Barbero</small></div><em>En servicio</em></div><div class="team-member"><div class="team-avatar julia">JG<span></span></div><div><strong>Julia Gómez</strong><small>Estilista</small></div><em>Disponible</em></div></div></article>
-            <article class="panel compact-panel reminder-panel"><div class="panel-header"><div><h3>Recordatorios</h3><p>Mensajes automáticos de hoy</p></div><span class="reminder-count">18 enviados</span></div><div class="progress-track"><div></div></div><div class="reminder-foot"><span><strong>75%</strong> de confirmación</span><a href="#configuracion">Configurar →</a></div></article>
-          </section>
-        </section>
-      </main>
-    </div>
-
-    <div class="modal-backdrop" id="modal" hidden>
-      <div class="modal" role="dialog" aria-modal="true" aria-labelledby="modal-title"><button class="close-modal" id="close-modal" aria-label="Cerrar">×</button><p class="eyebrow">NUEVA RESERVA</p><h2 id="modal-title">Agendar una cita</h2><p class="modal-subtitle">Completa los datos para añadir una cita a tu agenda.</p><form id="appointment-form"><label>Nombre del cliente<input required type="text" placeholder="Ej. Valentina Gómez" /></label><div class="form-row"><label>Fecha<input required type="date" value="2026-09-10" /></label><label>Hora<input required type="time" value="15:00" /></label></div><label>Servicio<select><option>Corte + cepillado</option><option>Corte clásico</option><option>Coloración</option><option>Barba + corte</option></select></label><button class="primary-button full" type="submit">Guardar cita</button></form></div>
-    </div>
-    <script src="script.js"></script>
+    <p>Redirigiendo a AgendaStyle...</p>
+    <p><a href="auth.html">Ir al inicio de sesión</a></p>
   </body>
 </html>
