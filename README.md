@@ -25,6 +25,10 @@ La interfaz visual incluye:
 - Diseño responsive para escritorio y dispositivos móviles.
 - Identidad visual de AgendaStyle con logo y favicon en formato PNG.
 
+La vista `auth.html` permite alternar entre iniciar sesión y crear una cuenta. El registro solicita nombres, apellidos, correo, clave y confirmación de clave, además del nombre, tipo, teléfono y dirección opcional del negocio. Incluye animaciones de entrada, transición entre formularios, indicador de carga, mensajes de éxito/error y botón para mostrar u ocultar la clave.
+
+El primer registro crea el negocio y asigna al propietario el rol `Administrador`. El rol no se puede elegir libremente desde el formulario público.
+
 ## Tecnologías
 
 ### Prototipo frontend
@@ -47,6 +51,7 @@ La interfaz visual incluye:
 - Node.js 18 o superior
 - Express
 - `mssql` para la conexión con SQL Server
+- `msnodesqlv8` para autenticación integrada de Windows
 - `dotenv` para variables de entorno
 - `cors` para permitir la comunicación con el frontend
 
@@ -55,21 +60,31 @@ La interfaz visual incluye:
 ```text
 Agenda_Style/
 ├── index.html                         # Panel visual de AgendaStyle
+├── auth.html                          # Interfaz de registro e inicio de sesión
+├── auth.css                           # Estilos y animaciones de autenticación
+├── auth.js                             # Validaciones y conexión con la API de auth
 ├── styles.css                         # Estilos y diseño responsive
 ├── script.js                          # Interacciones del prototipo
 ├── Agendastyle_logo.png               # Logo principal
 ├── favicon.png                        # Icono de la pestaña del navegador
 ├── database/
-│   └── 01_AgendaStyle.sql             # Base de datos, tablas, relaciones y seeds
+│   ├── 01_AgendaStyle.sql             # Base de datos, tablas, relaciones y seeds
+│   ├── 02_Usuarios_Auth.sql            # Migración para registro e inicio de sesión
+│   └── 03_Negocios_Propietarios.sql    # Negocio y relación con el propietario
 ├── backend/
 │   ├── package.json                   # Dependencias y scripts del backend
+│   ├── scripts/
+│   │   └── migrate.js                 # Ejecuta migraciones sobre AgendaStyle
 │   ├── .env.example                   # Plantilla de configuración
 │   ├── .gitignore                     # Archivos locales del backend
 │   └── src/
 │       ├── app.js                     # Servidor Express
 │       ├── config/
 │       │   └── database.js             # Pool de conexión a SQL Server
+│       ├── middleware/
+│       │   └── auth.middleware.js      # Validación de tokens JWT
 │       └── routes/
+│           ├── auth.routes.js          # Registro, login y usuario actual
 │           └── health.routes.js        # Ruta de verificación de conexión
 └── README.md
 ```
@@ -84,6 +99,9 @@ Clientes 1 ──── N Citas N ──── 1 Estilistas
                          └──── N ──── 1 Servicios
 
 Citas 1 ──── N Recordatorios
+
+Usuarios: cuentas de acceso para la autenticación del sistema.
+Usuarios N ──── 1 Negocios
 ```
 
 ### Tablas
@@ -93,6 +111,8 @@ Citas 1 ──── N Recordatorios
 - **Servicios:** catálogo de servicios, duración en minutos y precio.
 - **Citas:** cliente, estilista, servicio, fecha, hora de inicio, hora de finalización, estado y observaciones.
 - **Recordatorios:** cita asociada, tipo de mensaje, fecha programada, estado y fecha de envío.
+- **Usuarios:** nombres, apellidos, email, hash de contraseña, rol, estado y último acceso.
+- **Negocios:** nombre comercial, tipo de negocio, teléfono, dirección y estado.
 
 El archivo SQL también incluye datos iniciales de clientes, estilistas, servicios, citas y recordatorios para comprobar las relaciones.
 
@@ -105,6 +125,20 @@ El archivo SQL también incluye datos iniciales de clientes, estilistas, servici
 
 El script crea la base de datos si no existe, crea las tablas y carga datos de prueba. Las tablas y los registros iniciales tienen validaciones para evitar duplicados al ejecutar nuevamente el archivo.
 
+## Crear usuarios y autenticación
+
+Como la base de datos ya fue creada, ejecuta ahora el script de migración:
+
+1. Abre `database/02_Usuarios_Auth.sql` en SQL Server Management Studio.
+2. Verifica que la base seleccionada sea `AgendaStyle`.
+3. Ejecuta el script completo.
+
+Este archivo crea la tabla `Usuarios` con nombre, email, contraseña protegida, rol, estado, fecha de registro y último acceso. También crea un índice único para evitar emails duplicados.
+
+Después ejecuta `database/03_Negocios_Propietarios.sql`. Este script crea la tabla `Negocios` y relaciona cada usuario con su negocio mediante `NegocioId`.
+
+Las contraseñas no se almacenan en texto plano: el backend las transforma mediante `bcryptjs` antes de guardarlas.
+
 ## Configurar y ejecutar el backend
 
 Desde la carpeta raíz del proyecto:
@@ -115,16 +149,22 @@ Copy-Item .env.example .env
 npm install
 ```
 
+Para crear las tablas de autenticación y negocio sobre la base existente:
+
+```powershell
+npm run migrate
+```
+
 Edita el archivo `.env` con los datos de tu instancia de SQL Server:
 
 ```env
 PORT=3000
+DB_AUTH=windows
 DB_SERVER=localhost
 DB_PORT=1433
 DB_NAME=AgendaStyle
-DB_USER=sa
-DB_PASSWORD=TuPasswordAqui
-DB_ENCRYPT=false
+DB_DRIVER=ODBC Driver 18 for SQL Server
+DB_ENCRYPT=true
 DB_TRUST_SERVER_CERTIFICATE=true
 ```
 
@@ -146,6 +186,41 @@ El backend actual contiene únicamente rutas de verificación y estructura inici
 
 - `GET http://localhost:3000/api` — información básica de la API.
 - `GET http://localhost:3000/api/health` — verifica el estado del backend y la conexión con SQL Server.
+- `POST http://localhost:3000/api/auth/register` — registra un usuario nuevo.
+- `POST http://localhost:3000/api/auth/login` — valida credenciales y devuelve un token JWT.
+- `GET http://localhost:3000/api/auth/me` — consulta el usuario autenticado usando un token Bearer.
+
+### Registrar un usuario
+
+```json
+POST /api/auth/register
+Content-Type: application/json
+
+{
+  "nombres": "Hemer Santiago",
+  "apellidos": "Pérez Nieves",
+  "email": "hemer@example.com",
+  "password": "Agenda123!"
+}
+```
+
+### Iniciar sesión
+
+```json
+POST /api/auth/login
+Content-Type: application/json
+
+{
+  "email": "hemer@example.com",
+  "password": "Agenda123!"
+}
+```
+
+La respuesta incluye un `token`. Para consultar `/api/auth/me`, envíalo así:
+
+```text
+Authorization: Bearer <token>
+```
 
 Una respuesta exitosa de `/api/health` tendrá una estructura similar a:
 
@@ -169,11 +244,11 @@ La interfaz utiliza datos visuales de ejemplo y todavía no consulta la base de 
 
 1. Crear endpoints para clientes, servicios, estilistas y citas.
 2. Implementar la transacción de creación de una cita con validación de disponibilidad.
-3. Conectar el formulario del frontend con la API.
-4. Agregar consultas para agenda diaria e historial por cliente.
-5. Implementar el envío y seguimiento de recordatorios.
-6. Añadir autenticación y perfiles de usuario.
-7. Crear pruebas para las operaciones transaccionales.
+3. Conectar formularios de registro e inicio de sesión del frontend con la API.
+4. Conectar el dashboard con la información real de SQL Server.
+5. Agregar consultas para agenda diaria e historial por cliente.
+6. Implementar el envío y seguimiento de recordatorios.
+7. Añadir autorización por roles y crear pruebas transaccionales.
 
 ## Alcance actual
 

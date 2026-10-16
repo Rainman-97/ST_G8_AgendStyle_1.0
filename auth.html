@@ -1,0 +1,77 @@
+<!doctype html>
+<html lang="es">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>AgendaStyle · Acceso</title>
+    <link rel="icon" type="image/png" href="favicon.png" />
+    <link rel="stylesheet" href="auth.css" />
+  </head>
+  <body>
+    <main class="auth-page">
+      <section class="auth-brand-panel">
+        <div class="brand-glow glow-one"></div>
+        <div class="brand-glow glow-two"></div>
+        <div class="brand-copy">
+          <span class="brand-kicker">GESTIÓN DE CITAS</span>
+          <img class="auth-logo" src="Agendastyle_logo.png" alt="AgendaStyle" />
+          <p>Tu cita, nuestro estilo.</p>
+          <div class="brand-line"></div>
+          <small>Organiza tu negocio de belleza de forma simple, rápida y profesional.</small>
+        </div>
+        <div class="brand-footer"><span class="footer-dot"></span> Panel administrativo AgendaStyle</div>
+      </section>
+
+      <section class="auth-form-panel">
+        <div class="auth-form-wrap">
+          <div class="mobile-brand"><img src="Agendastyle_logo.png" alt="AgendaStyle" /></div>
+          <div class="form-heading">
+            <span class="eyebrow" id="form-eyebrow">BIENVENIDO DE NUEVO</span>
+            <h1 id="form-title">Inicia sesión</h1>
+            <p id="form-description">Accede a tu agenda y mantén todo bajo control.</p>
+          </div>
+
+          <div class="auth-switch" role="tablist" aria-label="Acceso a AgendaStyle">
+            <button class="switch-button active" id="login-tab" type="button" role="tab" aria-selected="true">Iniciar sesión</button>
+            <button class="switch-button" id="register-tab" type="button" role="tab" aria-selected="false">Crear cuenta</button>
+            <span class="switch-indicator"></span>
+          </div>
+
+          <div class="form-stage" id="form-stage">
+            <form class="auth-form login-form active-form" id="login-form" novalidate>
+              <label for="login-email">Correo electrónico</label>
+              <div class="input-wrap"><span class="input-symbol">@</span><input id="login-email" name="email" type="email" autocomplete="email" placeholder="correo@ejemplo.com" required /></div>
+              <div class="label-row"><label for="login-password">Contraseña</label><a href="#" class="forgot-link" id="forgot-link">¿Olvidaste tu clave?</a></div>
+              <div class="input-wrap"><span class="input-symbol">•</span><input id="login-password" name="password" type="password" autocomplete="current-password" placeholder="Ingresa tu contraseña" required /><button class="password-toggle" type="button" data-target="login-password" aria-label="Mostrar contraseña">◉</button></div>
+              <label class="check-label"><input type="checkbox" name="remember" /> <span>Recordar mi sesión</span></label>
+              <button class="submit-button" type="submit"><span class="button-label">Entrar a AgendaStyle</span><span class="button-loader"></span><span class="button-arrow">→</span></button>
+            </form>
+
+            <form class="auth-form register-form" id="register-form" novalidate>
+              <div class="name-grid"><div><label for="register-nombres">Nombres</label><div class="input-wrap"><span class="input-symbol">A</span><input id="register-nombres" name="nombres" type="text" autocomplete="given-name" placeholder="Tus nombres" required /></div></div><div><label for="register-apellidos">Apellidos</label><div class="input-wrap"><span class="input-symbol">A</span><input id="register-apellidos" name="apellidos" type="text" autocomplete="family-name" placeholder="Tus apellidos" required /></div></div></div>
+              <div class="business-heading"><span class="business-rule"></span><span>Datos del negocio</span><span class="business-rule"></span></div>
+              <label for="business-name">Nombre comercial</label>
+              <div class="input-wrap"><span class="input-symbol">⌂</span><input id="business-name" name="nombreComercial" type="text" placeholder="Ej. Look &amp; Me" required /></div>
+              <div class="name-grid business-grid"><div><label for="business-type">Tipo de negocio</label><div class="input-wrap select-wrap"><span class="input-symbol">▦</span><select id="business-type" name="tipoNegocio" required><option value="">Selecciona una opción</option><option value="Peluquería">Peluquería</option><option value="Barbería">Barbería</option><option value="Peluquería y barbería">Peluquería y barbería</option></select></div></div><div><label for="business-phone">Teléfono</label><div class="input-wrap"><span class="input-symbol">#</span><input id="business-phone" name="telefonoNegocio" type="tel" placeholder="300 000 0000" required /></div></div></div>
+              <label for="business-address">Dirección <span class="optional-label">(opcional)</span></label>
+              <div class="input-wrap"><span class="input-symbol">⌖</span><input id="business-address" name="direccionNegocio" type="text" placeholder="Dirección del negocio" /></div>
+              <label for="register-email">Correo electrónico</label>
+              <div class="input-wrap"><span class="input-symbol">@</span><input id="register-email" name="email" type="email" autocomplete="email" placeholder="correo@ejemplo.com" required /></div>
+              <label for="register-password">Clave</label>
+              <div class="input-wrap"><span class="input-symbol">•</span><input id="register-password" name="password" type="password" autocomplete="new-password" placeholder="Mínimo 8 caracteres" minlength="8" required /><button class="password-toggle" type="button" data-target="register-password" aria-label="Mostrar contraseña">◉</button></div>
+              <label for="register-confirm-password">Confirmar clave</label>
+              <div class="input-wrap"><span class="input-symbol">•</span><input id="register-confirm-password" name="confirmPassword" type="password" autocomplete="new-password" placeholder="Repite tu clave" minlength="8" required /><button class="password-toggle" type="button" data-target="register-confirm-password" aria-label="Mostrar contraseña">◉</button></div>
+              <label class="check-label terms-label"><input type="checkbox" name="terms" required /> <span>Acepto los términos y condiciones de AgendaStyle.</span></label>
+              <button class="submit-button" type="submit"><span class="button-label">Crear mi cuenta</span><span class="button-loader"></span><span class="button-arrow">→</span></button>
+            </form>
+          </div>
+
+          <p class="form-message" id="form-message" role="status"></p>
+          <p class="back-link"><a href="index.html">← Volver al panel principal</a></p>
+        </div>
+      </section>
+    </main>
+    <div class="toast" id="toast" role="alert"></div>
+    <script src="auth.js"></script>
+  </body>
+</html>
