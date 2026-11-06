@@ -130,6 +130,7 @@ form.addEventListener('submit', async (event) => {
       button.disabled = false;
       subtitle.textContent = originalSubtitle;
       form.reset();
+      loadDashboardData();
     }, 1000);
   } catch (error) {
     subtitle.textContent = error.message;
@@ -271,7 +272,7 @@ function createAgendaModal() {
   backdrop.className = 'modal-backdrop';
   backdrop.id = 'agenda-full-modal';
   backdrop.hidden = true;
-  backdrop.innerHTML = `<div class="modal agenda-full-modal" role="dialog" aria-modal="true"><button class="close-modal" type="button" aria-label="Cerrar">×</button><p class="eyebrow">AGENDA COMPLETA</p><h2>Todas las próximas citas</h2><p class="modal-subtitle">Citas futuras del negocio ordenadas por fecha y hora.</p><div class="full-agenda-list"></div></div>`;
+  backdrop.innerHTML = `<div class="modal agenda-full-modal" role="dialog" aria-modal="true"><button class="close-modal" type="button" aria-label="Cerrar">×</button><p class="eyebrow">AGENDA COMPLETA</p><h2>Historial de citas</h2><p class="modal-subtitle">Todas las citas registradas en este negocio.</p><div class="full-agenda-list"></div></div>`;
   document.body.appendChild(backdrop);
   backdrop.querySelector('.close-modal').addEventListener('click', () => { backdrop.hidden = true; });
   backdrop.addEventListener('click', (event) => { if (event.target === backdrop) backdrop.hidden = true; });
@@ -285,9 +286,9 @@ async function openFullAgenda(event) {
   backdrop.hidden = false;
   renderEmpty(list, 'Cargando agenda...');
   try {
-    const data = await apiRequest('/citas/proximas?periodo=mes&limite=20');
+    const data = await apiRequest('/citas/historial?limite=100');
     if (!data.citas.length) {
-      renderEmpty(list, 'No hay citas futuras registradas.');
+      renderEmpty(list, 'Aún no hay citas registradas.');
       return;
     }
     list.innerHTML = data.citas.map((cita) => {
