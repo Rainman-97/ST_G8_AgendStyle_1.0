@@ -238,11 +238,27 @@ router.post('/', authenticateToken, async (req, res) => {
       await transaction.commit();
       return res.status(201).json({ ok: true, message: 'Cita creada correctamente.', cita: appointment });
     } catch (transactionError) {
-      await transaction.rollback();
+      // El trigger de disponibilidad puede haber hecho rollback previamente.
+      // Conservamos el error original si la transacción ya está cerrada.
+      try {
+        await transaction.rollback();
+      } catch (_rollbackError) {
+        // La transacción ya estaba revertida o cerrada.
+      }
       throw transactionError;
     }
   } catch (error) {
-    return res.status(500).json({ ok: false, message: 'No fue posible crear la cita.', detail: error.message });
+    const errorMessage = String(error.message || '');
+    const isConflict = error.number === 2601 || error.number === 2627 || error.number === 50000;
+    const isScheduleConflict = errorMessage.toLowerCase().includes('ya tiene una cita') || errorMessage.toLowerCase().includes('cruce');
+
+    return res.status(isConflict || isScheduleConflict ? 409 : 500).json({
+      ok: false,
+      message: isConflict || isScheduleConflict
+        ? 'El estilista ya tiene una cita en ese horario.'
+        : 'No fue posible crear la cita.',
+      detail: process.env.NODE_ENV === 'production' ? undefined : error.message
+    });
   }
 });
 
