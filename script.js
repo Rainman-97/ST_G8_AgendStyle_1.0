@@ -381,6 +381,53 @@ function showToast(message) {
   showToast.timer = setTimeout(() => toast.classList.remove('visible'), 2600);
 }
 
+function createChatbotFeature() {
+  const nav = document.querySelector('.main-nav');
+  if (!nav || document.querySelector('#chatbot-nav-item')) return;
+
+  const item = document.createElement('a');
+  item.id = 'chatbot-nav-item';
+  item.className = 'nav-item chatbot-nav-item';
+  item.href = '#chatbot';
+  item.innerHTML = '<span class="nav-icon">✦</span>StyloBot<span class="bot-status">Beta</span>';
+  const reports = nav.querySelector('a[href="#reportes"]');
+  if (reports) nav.insertBefore(item, reports);
+  else nav.appendChild(item);
+
+  item.addEventListener('click', (event) => {
+    event.preventDefault();
+    createChatbotModal();
+    document.querySelector('#chatbot-modal').hidden = false;
+  });
+}
+
+function createChatbotModal() {
+  if (document.querySelector('#chatbot-modal')) return;
+  const backdrop = document.createElement('div');
+  backdrop.className = 'modal-backdrop';
+  backdrop.id = 'chatbot-modal';
+  backdrop.hidden = true;
+  backdrop.innerHTML = `<div class="modal chatbot-modal" role="dialog" aria-modal="true" aria-labelledby="chatbot-title">
+    <button class="close-modal" type="button" aria-label="Cerrar">×</button>
+    <div class="chatbot-heading"><div class="chatbot-avatar">✦</div><div><p class="eyebrow">ASISTENTE DEL NEGOCIO</p><h2 id="chatbot-title">StyloBot</h2></div><span class="bot-online"><i></i>Beta</span></div>
+    <p class="modal-subtitle">Prepara recordatorios y mensajes para tus clientes frecuentes.</p>
+    <div class="chatbot-options">
+      <button class="chatbot-option" type="button" data-chat-action="reminder"><span class="chatbot-option-icon">◷</span><span><strong>Enviar recordatorio</strong><small>Prepara un mensaje para las próximas citas.</small></span><b>→</b></button>
+      <button class="chatbot-option" type="button" data-chat-action="manage"><span class="chatbot-option-icon">♙</span><span><strong>Gestionar clientes</strong><small>Configura mensajes automáticos para clientes atendidos.</small></span><b>→</b></button>
+    </div>
+    <div class="chatbot-preview"><span class="chatbot-preview-dot"></span><div><strong>Mensajes automáticos</strong><small>Próximamente podrás personalizar respuestas y agendar citas automáticamente.</small></div><span class="coming-soon">Próximamente</span></div>
+  </div>`;
+  document.body.appendChild(backdrop);
+  backdrop.querySelector('.close-modal').addEventListener('click', () => { backdrop.hidden = true; });
+  backdrop.addEventListener('click', (event) => { if (event.target === backdrop) backdrop.hidden = true; });
+  backdrop.querySelectorAll('[data-chat-action]').forEach((button) => {
+    button.addEventListener('click', () => {
+      const action = button.dataset.chatAction;
+      showToast(action === 'reminder' ? 'El envío de recordatorios estará disponible próximamente.' : 'La gestión automática de clientes estará disponible próximamente.');
+    });
+  });
+}
+
 function setupDashboardInteractions() {
   setupUpcomingFilter();
   createAgendaModal();
@@ -590,6 +637,7 @@ async function loadDashboardData(requestedDate = null) {
 
 createTeamModal();
 createManagementButtons();
+createChatbotFeature();
 setupDashboardInteractions();
 const openTeamModal = document.querySelector('#open-team-modal');
 if (openTeamModal) {
