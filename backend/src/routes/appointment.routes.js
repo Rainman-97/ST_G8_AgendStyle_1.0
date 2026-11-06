@@ -110,10 +110,15 @@ router.get('/proximas', authenticateToken, async (req, res) => {
   try {
     const pool = await getConnection();
     const rangeCondition = periodo === 'dia'
-      ? 'CAST(c.FechaHoraInicio AS DATE) = CAST(SYSDATETIME() AS DATE)'
+      ? 'CAST(c.FechaHoraInicio AS DATE) = CAST(SYSDATETIME() AS DATE) AND c.FechaHoraInicio >= SYSDATETIME()'
       : periodo === 'semana'
-        ? 'c.FechaHoraInicio >= SYSDATETIME() AND c.FechaHoraInicio < DATEADD(DAY, 7, SYSDATETIME())'
-        : 'c.FechaHoraInicio >= SYSDATETIME() AND c.FechaHoraInicio < DATEADD(MONTH, 1, DATEFROMPARTS(YEAR(SYSDATETIME()), MONTH(SYSDATETIME()), 1))';
+        ? `c.FechaHoraInicio >= SYSDATETIME()
+           AND c.FechaHoraInicio < DATEADD(DAY,
+             7 - (DATEDIFF(DAY, '19000101', CAST(SYSDATETIME() AS DATE)) % 7),
+             CAST(SYSDATETIME() AS DATE))`
+        : `c.FechaHoraInicio >= SYSDATETIME()
+           AND c.FechaHoraInicio < DATEADD(MONTH, 1,
+             DATEFROMPARTS(YEAR(SYSDATETIME()), MONTH(SYSDATETIME()), 1))`;
 
     const result = await pool.request()
       .input('NegocioId', sql.Int, negocioId)
