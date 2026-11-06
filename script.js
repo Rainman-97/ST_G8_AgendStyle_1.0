@@ -7,6 +7,8 @@ const authToken = localStorage.getItem('agendaStyleToken');
 
 const storedUser = localStorage.getItem('agendaStyleUser');
 const currentUser = storedUser ? JSON.parse(storedUser) : null;
+let upcomingPeriod = 'dia';
+let selectedAgendaDate = null;
 
 if (currentUser) {
   const fullName = `${currentUser.nombres || ''} ${currentUser.apellidos || ''}`.trim();
@@ -165,7 +167,7 @@ function renderAppointments(citas) {
   if (!container) return;
   container.innerHTML = '';
   if (!citas.length) {
-    renderEmpty(container, 'No hay citas registradas para hoy.');
+    renderEmpty(container, 'No hay próximas citas registradas.');
     return;
   }
 
@@ -228,10 +230,113 @@ function renderCalendar(dateValue, datesWithAppointments) {
     const cell = document.createElement('span');
     const key = `${year}-${String(month + 1).padStart(2, '0')}-${String(day).padStart(2, '0')}`;
     cell.textContent = day;
+    cell.dataset.date = key;
+    cell.title = 'Ver agenda de este día';
+    cell.addEventListener('click', () => loadDashboardData(key));
     if (key === today) cell.classList.add('selected');
     if (appointmentDates.has(key)) cell.innerHTML += '<i></i>';
     calendar.appendChild(cell);
   }
+}
+
+async function loadUpcomingAppointments() {
+  const data = await apiRequest(`/citas/proximas?periodo=${upcomingPeriod}&limite=20`);
+  renderAppointments(data.citas || []);
+}
+
+function setupUpcomingFilter() {
+  const original = document.querySelector('.filter-button');
+  if (!original || original.dataset.ready) return;
+  const select = document.createElement('select');
+  select.className = 'filter-select';
+  select.innerHTML = '<option value="dia">Hoy</option><option value="semana">Esta semana</option><option value="mes">Este mes</option>';
+  select.value = upcomingPeriod;
+  select.setAttribute('aria-label', 'Filtrar próximas citas');
+  original.replaceWith(select);
+  select.addEventListener('change', async () => {
+    upcomingPeriod = select.value;
+    const list = document.querySelector('#appointment-list') || document.querySelector('.appointment-list');
+    if (list) renderEmpty(list, 'Cargando próximas citas...');
+    try {
+      await loadUpcomingAppointments();
+    } catch (_error) {
+      if (list) renderEmpty(list, 'No fue posible cargar las próximas citas.');
+    }
+  });
+}
+
+function createAgendaModal() {
+  if (document.querySelector('#agenda-full-modal')) return;
+  const backdrop = document.createElement('div');
+  backdrop.className = 'modal-backdrop';
+  backdrop.id = 'agenda-full-modal';
+  backdrop.hidden = true;
+  backdrop.innerHTML = `<div class="modal agenda-full-modal" role="dialog" aria-modal="true"><button class="close-modal" type="button" aria-label="Cerrar">×</button><p class="eyebrow">AGENDA COMPLETA</p><h2>Todas las próximas citas</h2><p class="modal-subtitle">Citas futuras del negocio ordenadas por fecha y hora.</p><div class="full-agenda-list"></div></div>`;
+  document.body.appendChild(backdrop);
+  backdrop.querySelector('.close-modal').addEventListener('click', () => { backdrop.hidden = true; });
+  backdrop.addEventListener('click', (event) => { if (event.target === backdrop) backdrop.hidden = true; });
+}
+
+async function openFullAgenda(event) {
+  event.preventDefault();
+  createAgendaModal();
+  const backdrop = document.querySelector('#agenda-full-modal');
+  const list = backdrop.querySelector('.full-agenda-list');
+  backdrop.hidden = false;
+  renderEmpty(list, 'Cargando agenda...');
+  try {
+    const data = await apiRequest('/citas/proximas?periodo=mes&limite=20');
+    if (!data.citas.length) {
+      renderEmpty(list, 'No hay citas futuras registradas.');
+      return;
+    }
+    list.innerHTML = data.citas.map((cita) => {
+      const start = new Date(cita.FechaHoraInicio);
+      return `<div class="agenda-full-row"><div><strong>${start.toLocaleDateString('es-CO', { day: '2-digit', month: 'short' })}</strong><span>${start.toLocaleTimeString('es-CO', { hour: '2-digit', minute: '2-digit', hour12: false })}</span></div><section><strong>${cita.Cliente}</strong><small>${cita.Servicio} · ${cita.Estilista}</small></section><em>${cita.Estado}</em></div>`;
+    }).join('');
+  } catch (_error) {
+    renderEmpty(list, 'No fue posible cargar la agenda completa.');
+  }
+}
+
+function showToast(message) {
+  let toast = document.querySelector('#dashboard-toast');
+  if (!toast) {
+    toast = document.createElement('div');
+    toast.id = 'dashboard-toast';
+    document.body.appendChild(toast);
+  }
+  toast.textContent = message;
+  toast.classList.add('visible');
+  clearTimeout(showToast.timer);
+  showToast.timer = setTimeout(() => toast.classList.remove('visible'), 2600);
+}
+
+function setupDashboardInteractions() {
+  setupUpcomingFilter();
+  createAgendaModal();
+  const viewAll = document.querySelector('.view-all');
+  if (viewAll && !viewAll.dataset.ready) {
+    viewAll.dataset.ready = 'true';
+    viewAll.addEventListener('click', openFullAgenda);
+  }
+  document.querySelectorAll('.nav-item').forEach((item) => {
+    if (item.dataset.ready) return;
+    item.dataset.ready = 'true';
+    item.addEventListener('click', (event) => {
+      const target = item.getAttribute('href');
+      if (target === '#clientes') {
+        event.preventDefault();
+        createManagementModal('cliente').hidden = false;
+      } else if (target === '#servicios') {
+        event.preventDefault();
+        createManagementModal('servicio').hidden = false;
+      } else if (target === '#reportes' || target === '#configuracion') {
+        event.preventDefault();
+        showToast('Este módulo estará disponible en la siguiente etapa.');
+      }
+    });
+  });
 }
 
 function clearFakeReminderSummary() {
@@ -318,10 +423,11 @@ function createManagementButtons() {
   });
 }
 
-async function loadDashboardData() {
+async function loadDashboardData(requestedDate = null) {
   if (!authToken) return;
   const now = new Date();
-  const date = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}-${String(now.getDate()).padStart(2, '0')}`;
+  const date = requestedDate || selectedAgendaDate || `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}-${String(now.getDate()).padStart(2, '0')}`;
+  selectedAgendaDate = date;
   const initialCards = document.querySelectorAll('.stat-card');
   const initialValues = ['0', '$ 0', '--', '0'];
   const initialDetails = ['Sin citas registradas', 'Sin citas facturables', 'No hay prÃ³ximas citas', 'Sin clientes registrados'];
@@ -362,7 +468,7 @@ async function loadDashboardData() {
     updateCard(2, next ? new Date(next.FechaHoraInicio).toLocaleTimeString('es-CO', { hour: '2-digit', minute: '2-digit', hour12: false }) : '--', next ? `${next.Cliente} · ${next.Servicio}` : 'No hay próximas citas');
     renderCalendar(date, summary.fechasConCitas);
     clearFakeReminderSummary();
-    renderAppointments(agenda.citas || []);
+    await loadUpcomingAppointments();
     renderTeam(team.equipo || []);
   } catch (error) {
     console.error('No se pudo cargar el dashboard:', error);
@@ -373,6 +479,7 @@ async function loadDashboardData() {
 
 createTeamModal();
 createManagementButtons();
+setupDashboardInteractions();
 const openTeamModal = document.querySelector('#open-team-modal');
 if (openTeamModal) {
   openTeamModal.addEventListener('click', () => {
