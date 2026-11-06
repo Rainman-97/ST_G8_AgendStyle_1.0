@@ -161,7 +161,7 @@ function renderEmpty(container, message) {
 }
 
 function renderAppointments(citas) {
-  const container = document.querySelector('#appointment-list');
+  const container = document.querySelector('#appointment-list') || document.querySelector('.appointment-list');
   if (!container) return;
   container.innerHTML = '';
   if (!citas.length) {
@@ -322,7 +322,22 @@ async function loadDashboardData() {
   if (!authToken) return;
   const now = new Date();
   const date = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}-${String(now.getDate()).padStart(2, '0')}`;
-  const list = document.querySelector('#appointment-list');
+  const initialCards = document.querySelectorAll('.stat-card');
+  const initialValues = ['0', '$ 0', '--', '0'];
+  const initialDetails = ['Sin citas registradas', 'Sin citas facturables', 'No hay prÃ³ximas citas', 'Sin clientes registrados'];
+  initialCards.forEach((card, index) => {
+    const value = card.querySelector('strong');
+    const detail = card.querySelector('small');
+    const trend = card.querySelector('.trend');
+    if (value) value.textContent = initialValues[index];
+    if (detail) detail.textContent = initialDetails[index];
+    if (trend) trend.textContent = 'Sin datos';
+  });
+  const initialAgendaLabel = document.querySelector('#today-agenda-label') || document.querySelector('.section-heading p');
+  if (initialAgendaLabel) initialAgendaLabel.textContent = formatDateLabel(date);
+  renderCalendar(date, []);
+  clearFakeReminderSummary();
+  const list = document.querySelector('#appointment-list') || document.querySelector('.appointment-list');
   if (list) renderEmpty(list, 'Cargando citas...');
   try {
     const [summary, agenda, team] = await Promise.all([
@@ -330,16 +345,21 @@ async function loadDashboardData() {
       apiRequest(`/citas/?fecha=${date}`),
       apiRequest('/dashboard/equipo')
     ]);
-    document.querySelector('#today-appointments').textContent = summary.citasHoy;
-    document.querySelector('#today-appointments-detail').textContent = summary.citasHoy ? 'Citas activas para hoy' : 'Sin citas registradas';
-    document.querySelector('#estimated-income').textContent = formatMoney(summary.ingresosEstimados);
-    document.querySelector('#estimated-income-detail').textContent = summary.ingresosEstimados ? 'Según los servicios agendados' : 'Sin citas facturables';
-    document.querySelector('#registered-clients').textContent = summary.clientesRegistrados;
-    document.querySelector('#registered-clients-detail').textContent = summary.clientesRegistrados ? 'Clientes activos del negocio' : 'Sin clientes registrados';
-    document.querySelector('#today-agenda-label').textContent = formatDateLabel(date);
+    const cards = document.querySelectorAll('.stat-card');
+    const updateCard = (index, value, detail) => {
+      if (!cards[index]) return;
+      const valueElement = cards[index].querySelector('strong');
+      const detailElement = cards[index].querySelector('small');
+      if (valueElement) valueElement.textContent = value;
+      if (detailElement) detailElement.textContent = detail;
+    };
+    updateCard(0, summary.citasHoy, summary.citasHoy ? 'Citas activas para hoy' : 'Sin citas registradas');
+    updateCard(1, formatMoney(summary.ingresosEstimados), summary.ingresosEstimados ? 'Según los servicios agendados' : 'Sin citas facturables');
+    updateCard(3, summary.clientesRegistrados, summary.clientesRegistrados ? 'Clientes activos del negocio' : 'Sin clientes registrados');
+    const agendaLabel = document.querySelector('#today-agenda-label') || document.querySelector('.section-heading p');
+    if (agendaLabel) agendaLabel.textContent = formatDateLabel(date);
     const next = summary.proximaCita;
-    document.querySelector('#next-appointment').textContent = next ? new Date(next.FechaHoraInicio).toLocaleTimeString('es-CO', { hour: '2-digit', minute: '2-digit', hour12: false }) : '--';
-    document.querySelector('#next-appointment-detail').textContent = next ? `${next.Cliente} · ${next.Servicio}` : 'No hay próximas citas';
+    updateCard(2, next ? new Date(next.FechaHoraInicio).toLocaleTimeString('es-CO', { hour: '2-digit', minute: '2-digit', hour12: false }) : '--', next ? `${next.Cliente} · ${next.Servicio}` : 'No hay próximas citas');
     renderCalendar(date, summary.fechasConCitas);
     clearFakeReminderSummary();
     renderAppointments(agenda.citas || []);
