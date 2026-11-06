@@ -1088,6 +1088,49 @@ body {
   font-size: 10px;
 }
 
+.appointment-actions {
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  margin-left: auto;
+}
+
+.appointment-state {
+  border: 1px solid #d9e2ed;
+  border-radius: 6px;
+  padding: 6px 8px;
+  color: #31527f;
+  background: #fff;
+  font: 600 10px 'DM Sans', sans-serif;
+  cursor: pointer;
+}
+
+.cancel-appointment {
+  border: 0;
+  color: #9a5260;
+  background: transparent;
+  font: 600 10px 'DM Sans', sans-serif;
+  cursor: pointer;
+  padding: 5px;
+}
+
+.cancel-appointment:hover {
+  color: #713743;
+  text-decoration: underline;
+}
+
+.appointment-state:disabled,
+.cancel-appointment:disabled {
+  opacity: .55;
+  cursor: wait;
+}
+
+.agenda-full-row .appointment-actions {
+  grid-column: 1 / -1;
+  justify-content: flex-end;
+  margin-top: 2px;
+}
+
 #dashboard-toast {
   position: fixed;
   right: 24px;
@@ -1128,5 +1171,9 @@ body {
   .agenda-full-row em {
     grid-column: 2;
     justify-self: start;
+  }
+
+  .appointment-actions {
+    flex-wrap: wrap;
   }
 }

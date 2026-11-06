@@ -163,6 +163,65 @@ function renderEmpty(container, message) {
   container.innerHTML = `<p class="empty-state">${message}</p>`;
 }
 
+function appointmentActions(cita) {
+  const state = String(cita.Estado || 'Pendiente');
+  const isClosed = ['Cancelada', 'Atendida', 'No asistió'].includes(state);
+  return `<div class="appointment-actions" data-appointment-id="${cita.CitaId}">
+    <select class="appointment-state" aria-label="Cambiar estado de la cita" ${state === 'Cancelada' ? 'disabled' : ''}>
+      <option value="Pendiente" ${state === 'Pendiente' ? 'selected' : ''}>Pendiente</option>
+      <option value="Confirmada" ${state === 'Confirmada' ? 'selected' : ''}>Confirmada</option>
+      <option value="Atendida" ${state === 'Atendida' ? 'selected' : ''}>Finalizada</option>
+      <option value="No asistió" ${state === 'No asistió' ? 'selected' : ''}>No asistió</option>
+    </select>
+    ${!isClosed ? '<button type="button" class="cancel-appointment">Cancelar</button>' : ''}
+  </div>`;
+}
+
+async function changeAppointmentState(citaId, estado) {
+  await apiRequest(`/citas/${citaId}/estado`, {
+    method: 'PATCH',
+    body: JSON.stringify({ estado })
+  });
+  showToast('Estado de la cita actualizado.');
+  const historyModal = document.querySelector('#agenda-full-modal');
+  if (historyModal) historyModal.hidden = true;
+  await loadDashboardData();
+}
+
+async function cancelAppointment(citaId) {
+  if (!window.confirm('¿Deseas cancelar esta cita?')) return;
+  await apiRequest(`/citas/${citaId}/cancelar`, { method: 'PATCH' });
+  showToast('Cita cancelada correctamente.');
+  const historyModal = document.querySelector('#agenda-full-modal');
+  if (historyModal) historyModal.hidden = true;
+  await loadDashboardData();
+}
+
+function bindAppointmentActions(container) {
+  container.querySelectorAll('.appointment-state').forEach((select) => {
+    select.addEventListener('change', async () => {
+      try {
+        select.disabled = true;
+        await changeAppointmentState(select.closest('[data-appointment-id]').dataset.appointmentId, select.value);
+      } catch (error) {
+        showToast(error.message);
+        select.disabled = false;
+      }
+    });
+  });
+  container.querySelectorAll('.cancel-appointment').forEach((button) => {
+    button.addEventListener('click', async () => {
+      try {
+        button.disabled = true;
+        await cancelAppointment(button.closest('[data-appointment-id]').dataset.appointmentId);
+      } catch (error) {
+        showToast(error.message);
+        button.disabled = false;
+      }
+    });
+  });
+}
+
 function renderAppointments(citas) {
   const container = document.querySelector('#appointment-list') || document.querySelector('.appointment-list');
   if (!container) return;
@@ -182,9 +241,11 @@ function renderAppointments(citas) {
       <div class="appointment-line ${['blue-line', 'green-line', 'orange-line', 'pink-line'][index % 4]}"></div>
       <div class="client-avatar blue-avatar">${initials(cita.Cliente)}</div>
       <div class="appointment-info"><strong>${cita.Cliente}</strong><span>${cita.Servicio} · ${cita.Estilista}</span></div>
-      <span class="status ${String(cita.Estado).toLowerCase() === 'confirmada' ? 'confirmed' : 'pending'}">${cita.Estado}</span>`;
+      <span class="status ${String(cita.Estado).toLowerCase() === 'confirmada' ? 'confirmed' : 'pending'}">${cita.Estado}</span>
+      ${appointmentActions(cita)}`;
     container.appendChild(item);
   });
+  bindAppointmentActions(container);
 }
 
 function renderTeam(team) {
@@ -293,8 +354,9 @@ async function openFullAgenda(event) {
     }
     list.innerHTML = data.citas.map((cita) => {
       const start = new Date(cita.FechaHoraInicio);
-      return `<div class="agenda-full-row"><div><strong>${start.toLocaleDateString('es-CO', { day: '2-digit', month: 'short' })}</strong><span>${start.toLocaleTimeString('es-CO', { hour: '2-digit', minute: '2-digit', hour12: false })}</span></div><section><strong>${cita.Cliente}</strong><small>${cita.Servicio} · ${cita.Estilista}</small></section><em>${cita.Estado}</em></div>`;
+      return `<div class="agenda-full-row" data-appointment-id="${cita.CitaId}"><div><strong>${start.toLocaleDateString('es-CO', { day: '2-digit', month: 'short' })}</strong><span>${start.toLocaleTimeString('es-CO', { hour: '2-digit', minute: '2-digit', hour12: false })}</span></div><section><strong>${cita.Cliente}</strong><small>${cita.Servicio} · ${cita.Estilista}</small></section><em>${cita.Estado}</em>${appointmentActions(cita)}</div>`;
     }).join('');
+    bindAppointmentActions(list);
   } catch (_error) {
     renderEmpty(list, 'No fue posible cargar la agenda completa.');
   }
