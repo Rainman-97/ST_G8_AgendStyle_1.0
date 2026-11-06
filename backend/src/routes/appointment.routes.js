@@ -183,6 +183,34 @@ router.get('/historial', authenticateToken, async (req, res) => {
   }
 });
 
+router.get('/pendientes', authenticateToken, async (req, res) => {
+  const negocioId = getBusinessId(req);
+
+  if (!negocioId) {
+    return res.status(403).json({ ok: false, message: 'El usuario no tiene un negocio asociado.' });
+  }
+
+  try {
+    const pool = await getConnection();
+    const result = await pool.request()
+      .input('NegocioId', sql.Int, negocioId)
+      .query(`
+        SELECT c.CitaId, c.FechaHoraInicio, c.FechaHoraFin, c.Estado,
+          CONCAT(cl.Nombres, ' ', cl.Apellidos) AS Cliente,
+          cl.Telefono, cl.Email, s.Nombre AS Servicio
+        FROM dbo.Citas AS c
+        INNER JOIN dbo.Clientes AS cl ON cl.ClienteId = c.ClienteId
+        INNER JOIN dbo.Servicios AS s ON s.ServicioId = c.ServicioId
+        WHERE c.NegocioId = @NegocioId AND c.Estado = 'Pendiente'
+        ORDER BY c.FechaHoraInicio;
+      `);
+
+    return res.json({ ok: true, citas: result.recordset });
+  } catch (error) {
+    return res.status(500).json({ ok: false, message: 'No fue posible cargar las citas pendientes.', detail: error.message });
+  }
+});
+
 router.get('/', authenticateToken, async (req, res) => {
   const negocioId = getBusinessId(req);
   const fecha = req.query.fecha || new Date().toISOString().slice(0, 10);
