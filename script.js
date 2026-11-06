@@ -306,7 +306,8 @@ function renderCalendar(dateValue, datesWithAppointments) {
 }
 
 async function loadUpcomingAppointments() {
-  const data = await apiRequest(`/citas/proximas?periodo=${upcomingPeriod}&limite=20`);
+  const referenceDate = selectedAgendaDate || new Date().toISOString().slice(0, 10);
+  const data = await apiRequest(`/citas/proximas?periodo=${upcomingPeriod}&fecha=${referenceDate}&limite=20`);
   renderAppointments(data.citas || []);
 }
 
