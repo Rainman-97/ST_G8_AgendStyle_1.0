@@ -381,6 +381,47 @@ function showToast(message) {
   showToast.timer = setTimeout(() => toast.classList.remove('visible'), 2600);
 }
 
+function createReminderModal() {
+  if (document.querySelector('#reminder-modal')) return;
+  const modal = document.createElement('div');
+  modal.className = 'modal-backdrop';
+  modal.id = 'reminder-modal';
+  modal.hidden = true;
+  modal.innerHTML = `<div class="modal reminder-modal" role="dialog" aria-modal="true"><button class="close-modal" type="button" aria-label="Cerrar">×</button><p class="eyebrow">STYLOBOT · RECORDATORIOS</p><h2>Clientes con cita pendiente</h2><p class="modal-subtitle">Selecciona una cita pendiente para elegir cómo contactar al cliente.</p><div class="pending-appointments-list"></div></div>`;
+  document.body.appendChild(modal);
+  modal.querySelector('.close-modal').addEventListener('click', () => { modal.hidden = true; });
+  modal.addEventListener('click', (event) => { if (event.target === modal) modal.hidden = true; });
+}
+
+async function openReminderModal() {
+  createReminderModal();
+  const modal = document.querySelector('#reminder-modal');
+  const list = modal.querySelector('.pending-appointments-list');
+  modal.hidden = false;
+  renderEmpty(list, 'Cargando citas pendientes...');
+  try {
+    const data = await apiRequest('/citas/pendientes');
+    if (!data.citas.length) {
+      renderEmpty(list, 'No hay clientes con citas pendientes.');
+      return;
+    }
+    list.innerHTML = data.citas.map((cita) => {
+      const start = new Date(cita.FechaHoraInicio);
+      const date = start.toLocaleDateString('es-CO', { day: '2-digit', month: 'short', year: 'numeric' });
+      const time = start.toLocaleTimeString('es-CO', { hour: '2-digit', minute: '2-digit', hour12: false });
+      return `<article class="pending-appointment"><div class="pending-appointment-main"><div class="client-avatar blue-avatar">${initials(cita.Cliente)}</div><div><strong>${cita.Cliente}</strong><small>${date} · ${time}</small><small>${cita.Servicio}</small></div><span class="pending-badge">Pendiente</span></div><div class="reminder-actions"><button type="button" class="reminder-action whatsapp-action" data-contact="WhatsApp">WhatsApp</button><button type="button" class="reminder-action call-action" data-contact="llamada">Llamar</button></div></article>`;
+    }).join('');
+    list.querySelectorAll('.reminder-action').forEach((button) => {
+      button.addEventListener('click', () => {
+        const clientName = button.closest('.pending-appointment').querySelector('strong').textContent;
+        window.alert(`Recordatorio enviado por ${button.dataset.contact} a ${clientName}.`);
+      });
+    });
+  } catch (error) {
+    renderEmpty(list, error.message || 'No fue posible cargar las citas pendientes.');
+  }
+}
+
 function createChatbotFeature() {
   const nav = document.querySelector('.main-nav');
   if (!nav || document.querySelector('#chatbot-nav-item')) return;
@@ -423,6 +464,11 @@ function createChatbotModal() {
   backdrop.querySelectorAll('[data-chat-action]').forEach((button) => {
     button.addEventListener('click', () => {
       const action = button.dataset.chatAction;
+      if (action === 'reminder') {
+        backdrop.hidden = true;
+        openReminderModal();
+        return;
+      }
       showToast(action === 'reminder' ? 'El envío de recordatorios estará disponible próximamente.' : 'La gestión automática de clientes estará disponible próximamente.');
     });
   });
