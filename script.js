@@ -331,6 +331,12 @@ function setupDashboardInteractions() {
       } else if (target === '#servicios') {
         event.preventDefault();
         createManagementModal('servicio').hidden = false;
+      } else if (target === '#equipo') {
+        event.preventDefault();
+        document.querySelector('#equipo')?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+        if (currentUser?.rol === 'Administrador') {
+          setTimeout(() => { document.querySelector('#team-modal').hidden = false; }, 250);
+        }
       } else if (target === '#reportes' || target === '#configuracion') {
         event.preventDefault();
         showToast('Este módulo estará disponible en la siguiente etapa.');
@@ -404,23 +410,8 @@ function createManagementModal(type) {
 }
 
 function createManagementButtons() {
-  const actions = document.querySelector('.welcome-row');
-  const newAppointment = document.querySelector('#open-modal');
-  if (!actions || !newAppointment || currentUser?.rol !== 'Administrador') return;
-  ['cliente', 'servicio', 'equipo'].forEach((type) => {
-    const button = document.createElement('button');
-    button.type = 'button';
-    button.className = 'text-link management-button';
-    button.textContent = type === 'cliente' ? '+ Cliente' : type === 'servicio' ? '+ Servicio' : '+ Equipo';
-    button.addEventListener('click', () => {
-      if (type === 'equipo') {
-        document.querySelector('#team-modal').hidden = false;
-      } else {
-        createManagementModal(type).hidden = false;
-      }
-    });
-    actions.insertBefore(button, newAppointment);
-  });
+  // La gestión se realiza desde el menú lateral.
+  document.querySelectorAll('.management-button').forEach((button) => button.remove());
 }
 
 async function loadDashboardData(requestedDate = null) {
