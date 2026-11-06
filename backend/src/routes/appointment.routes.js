@@ -102,6 +102,9 @@ router.get('/proximas', authenticateToken, async (req, res) => {
   const negocioId = getBusinessId(req);
   const limite = Math.min(Math.max(Number(req.query.limite) || 5, 1), 20);
   const periodo = ['dia', 'semana', 'mes'].includes(String(req.query.periodo)) ? String(req.query.periodo) : 'dia';
+  const fecha = /^\d{4}-\d{2}-\d{2}$/.test(String(req.query.fecha || ''))
+    ? String(req.query.fecha)
+    : new Date().toISOString().slice(0, 10);
 
   if (!negocioId) {
     return res.status(403).json({ ok: false, message: 'El usuario no tiene un negocio asociado.' });
@@ -110,19 +113,20 @@ router.get('/proximas', authenticateToken, async (req, res) => {
   try {
     const pool = await getConnection();
     const rangeCondition = periodo === 'dia'
-      ? 'CAST(c.FechaHoraInicio AS DATE) = CAST(SYSDATETIME() AS DATE) AND c.FechaHoraInicio >= SYSDATETIME()'
+      ? 'CAST(c.FechaHoraInicio AS DATE) = @Fecha'
       : periodo === 'semana'
-        ? `c.FechaHoraInicio >= SYSDATETIME()
-           AND c.FechaHoraInicio < DATEADD(DAY,
-             7 - (DATEDIFF(DAY, '19000101', CAST(SYSDATETIME() AS DATE)) % 7),
-             CAST(SYSDATETIME() AS DATE))`
-        : `c.FechaHoraInicio >= SYSDATETIME()
+        ? `c.FechaHoraInicio >= DATEADD(DAY, ((DAY(@Fecha) - 1) / 7) * 7,
+             DATEFROMPARTS(YEAR(@Fecha), MONTH(@Fecha), 1))
+           AND c.FechaHoraInicio < DATEADD(DAY, ((DAY(@Fecha) - 1) / 7 + 1) * 7,
+             DATEFROMPARTS(YEAR(@Fecha), MONTH(@Fecha), 1))`
+        : `c.FechaHoraInicio >= DATEFROMPARTS(YEAR(@Fecha), MONTH(@Fecha), 1)
            AND c.FechaHoraInicio < DATEADD(MONTH, 1,
-             DATEFROMPARTS(YEAR(SYSDATETIME()), MONTH(SYSDATETIME()), 1))`;
+             DATEFROMPARTS(YEAR(@Fecha), MONTH(@Fecha), 1))`;
 
     const result = await pool.request()
       .input('NegocioId', sql.Int, negocioId)
       .input('Limite', sql.Int, limite)
+      .input('Fecha', sql.Date, fecha)
       .query(`
         SELECT TOP (@Limite)
           c.CitaId, c.FechaHoraInicio, c.FechaHoraFin, c.Estado, c.Observaciones,
@@ -134,12 +138,12 @@ router.get('/proximas', authenticateToken, async (req, res) => {
         INNER JOIN dbo.Estilistas AS e ON e.EstilistaId = c.EstilistaId
         INNER JOIN dbo.Servicios AS s ON s.ServicioId = c.ServicioId
         WHERE c.NegocioId = @NegocioId
-          AND c.Estado NOT IN ('Cancelada', 'No asistió')
+          AND c.Estado <> 'Cancelada'
           AND ${rangeCondition}
         ORDER BY c.FechaHoraInicio;
       `);
 
-    return res.json({ ok: true, periodo, citas: result.recordset });
+    return res.json({ ok: true, periodo, fecha, citas: result.recordset });
   } catch (error) {
     return res.status(500).json({ ok: false, message: 'No fue posible cargar las próximas citas.', detail: error.message });
   }
