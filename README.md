@@ -59,10 +59,14 @@ El primer registro crea el negocio y asigna al propietario el rol `Administrador
 
 ```text
 Agenda_Style/
-├── index.html                         # Panel visual de AgendaStyle
+├── index.html                         # Entrada del repositorio: redirige a auth.html
+├── dashboard.html                     # Panel visual de AgendaStyle
 ├── auth.html                          # Interfaz de registro e inicio de sesión
 ├── auth.css                           # Estilos y animaciones de autenticación
 ├── auth.js                             # Validaciones y conexión con la API de auth
+├── reservar.html                       # Reserva pública para clientes
+├── booking.css                         # Estilos de reserva pública
+├── booking.js                          # Conexión del formulario público con la API
 ├── styles.css                         # Estilos y diseño responsive
 ├── script.js                          # Interacciones del prototipo
 ├── Agendastyle_logo.png               # Logo principal
@@ -70,9 +74,12 @@ Agenda_Style/
 ├── database/
 │   ├── 01_AgendaStyle.sql             # Base de datos, tablas, relaciones y seeds
 │   ├── 02_Usuarios_Auth.sql            # Migración para registro e inicio de sesión
-│   └── 03_Negocios_Propietarios.sql    # Negocio y relación con el propietario
+│   ├── 03_Negocios_Propietarios.sql    # Negocio y relación con el propietario
+│   ├── 04_Consultas_AgendaStyle.sql    # Consultas de verificación
+│   └── 05_Citas_Transaccional.sql      # Relación de citas con el negocio
 ├── backend/
 │   ├── package.json                   # Dependencias y scripts del backend
+│   ├── .env.vps.example               # Plantilla para SQL Server en el VPS
 │   ├── scripts/
 │   │   └── migrate.js                 # Ejecuta migraciones sobre AgendaStyle
 │   ├── .env.example                   # Plantilla de configuración
@@ -115,6 +122,12 @@ Usuarios N ──── 1 Negocios
 - **Negocios:** nombre comercial, tipo de negocio, teléfono, dirección y estado.
 
 El archivo SQL también incluye datos iniciales de clientes, estilistas, servicios, citas y recordatorios para comprobar las relaciones.
+
+## Módulo transaccional de citas
+
+La creación de una cita se realiza desde `POST /api/citas` con una transacción SQL Server en nivel `SERIALIZABLE`. Dentro de la misma transacción se valida el servicio, se bloquea el rango horario del estilista, se inserta la cita y se crea su recordatorio. Si alguna operación falla, se ejecuta `ROLLBACK` y no queda una cita incompleta.
+
+También se evita el doble agendamiento mediante la validación de intervalos de tiempo y el trigger `trg_Citas_EvitarCrucesHorario`.
 
 ## Crear la base de datos
 
@@ -189,6 +202,13 @@ El backend actual contiene únicamente rutas de verificación y estructura inici
 - `POST http://localhost:3000/api/auth/register` — registra un usuario nuevo.
 - `POST http://localhost:3000/api/auth/login` — valida credenciales y devuelve un token JWT.
 - `GET http://localhost:3000/api/auth/me` — consulta el usuario autenticado usando un token Bearer.
+- `GET http://localhost:3000/api/citas/catalogos` — carga clientes, estilistas y servicios activos.
+- `GET http://localhost:3000/api/citas/catalogos-publicos?negocioId=1` — catálogos que puede consultar un cliente.
+- `GET http://localhost:3000/api/citas?fecha=YYYY-MM-DD` — consulta la agenda del día.
+- `POST http://localhost:3000/api/citas` — crea una cita y su recordatorio dentro de una transacción.
+- `POST http://localhost:3000/api/citas/reservar` — permite que un cliente solicite una cita sin acceder al panel administrativo.
+- `PATCH http://localhost:3000/api/citas/:id/cancelar` — cancela una cita del negocio autenticado.
+- `PATCH http://localhost:3000/api/citas/:id/estado` — actualiza el estado de una cita.
 
 ### Registrar un usuario
 
@@ -236,9 +256,11 @@ Una respuesta exitosa de `/api/health` tendrá una estructura similar a:
 
 ## Abrir el prototipo visual
 
-La interfaz puede abrirse directamente ejecutando `index.html` en el navegador. También puede servirse mediante una extensión como Live Server en Visual Studio Code.
+Al abrir `index.html` —incluido el enlace principal del repositorio— se redirige automáticamente a `auth.html`. Después de iniciar sesión, el sistema lleva a `dashboard.html`, que contiene el panel principal. También puede ejecutarse mediante una extensión como Live Server en Visual Studio Code.
 
 La interfaz utiliza datos visuales de ejemplo y todavía no consulta la base de datos. La integración frontend-backend se realizará cuando se implementen los primeros endpoints transaccionales.
+
+Los clientes pueden reservar desde `reservar.html?negocioId=1`. El `negocioId` debe corresponder al negocio que se desea mostrar; el formulario carga sus servicios y estilistas activos y crea la solicitud de cita con estado `Pendiente`.
 
 ## Próximos pasos
 
