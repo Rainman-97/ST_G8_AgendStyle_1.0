@@ -378,10 +378,16 @@ function showToast(message) {
 function setupDashboardInteractions() {
   setupUpcomingFilter();
   createAgendaModal();
+  createTeamDirectoryModal();
   const viewAll = document.querySelector('.view-all');
   if (viewAll && !viewAll.dataset.ready) {
     viewAll.dataset.ready = 'true';
     viewAll.addEventListener('click', openFullAgenda);
+  }
+  const teamLink = document.querySelector('#equipo .text-link');
+  if (teamLink && !teamLink.dataset.ready) {
+    teamLink.dataset.ready = 'true';
+    teamLink.addEventListener('click', openTeamDirectory);
   }
   document.querySelectorAll('.nav-item').forEach((item) => {
     if (item.dataset.ready) return;
@@ -441,6 +447,41 @@ function createTeamModal() {
       message.className = 'form-message error';
     }
   });
+}
+
+function createTeamDirectoryModal() {
+  if (document.querySelector('#team-directory-modal')) return;
+  const modal = document.createElement('div');
+  modal.className = 'modal-backdrop';
+  modal.id = 'team-directory-modal';
+  modal.hidden = true;
+  modal.innerHTML = `<div class="modal team-directory-modal" role="dialog" aria-modal="true"><button class="close-modal" type="button" aria-label="Cerrar">×</button><p class="eyebrow">EQUIPO DEL NEGOCIO</p><h2>Ver equipo</h2><p class="modal-subtitle">Miembros registrados actualmente en tu negocio.</p><div class="team-directory-list"></div><button class="primary-button full add-team-from-directory" type="button">Agregar miembro</button></div>`;
+  document.body.appendChild(modal);
+  modal.querySelector('.close-modal').addEventListener('click', () => { modal.hidden = true; });
+  modal.addEventListener('click', (event) => { if (event.target === modal) modal.hidden = true; });
+  modal.querySelector('.add-team-from-directory').addEventListener('click', () => {
+    modal.hidden = true;
+    if (currentUser?.rol === 'Administrador') document.querySelector('#team-modal').hidden = false;
+  });
+}
+
+async function openTeamDirectory(event) {
+  event.preventDefault();
+  createTeamDirectoryModal();
+  const modal = document.querySelector('#team-directory-modal');
+  const list = modal.querySelector('.team-directory-list');
+  modal.hidden = false;
+  renderEmpty(list, 'Cargando equipo...');
+  try {
+    const data = await apiRequest('/dashboard/equipo');
+    if (!data.equipo.length) {
+      renderEmpty(list, 'Aún no hay miembros del equipo registrados.');
+      return;
+    }
+    list.innerHTML = data.equipo.map((member) => `<article class="team-directory-row"><div class="team-avatar blue-avatar">${initials(`${member.Nombres} ${member.Apellidos}`)}</div><div><strong>${member.Nombres} ${member.Apellidos}</strong><small>${member.Especialidad}</small><small>${member.Email || 'Sin correo registrado'} · ${member.Telefono || 'Sin teléfono registrado'}</small></div><em>${member.Activo ? 'Activo' : 'Inactivo'}</em></article>`).join('');
+  } catch (error) {
+    renderEmpty(list, error.message || 'No fue posible cargar el equipo.');
+  }
 }
 
 function createManagementModal(type) {

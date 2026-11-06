@@ -1046,6 +1046,48 @@ body {
   max-width: 720px;
 }
 
+.team-directory-modal {
+  max-width: 650px;
+}
+
+.team-directory-list {
+  display: grid;
+  gap: 10px;
+  max-height: 390px;
+  overflow-y: auto;
+  margin: 20px 0;
+}
+
+.team-directory-row {
+  display: grid;
+  grid-template-columns: 42px 1fr auto;
+  align-items: center;
+  gap: 12px;
+  padding: 12px;
+  border: 1px solid #e5ebf2;
+  border-radius: 10px;
+  background: #f8fafc;
+}
+
+.team-directory-row > div:nth-child(2) {
+  display: grid;
+  gap: 3px;
+}
+
+.team-directory-row small {
+  color: #8291a6;
+  font-size: 10px;
+}
+
+.team-directory-row em {
+  color: #31527f;
+  background: #e8eef6;
+  border-radius: 999px;
+  padding: 6px 9px;
+  font-size: 10px;
+  font-style: normal;
+}
+
 .full-agenda-list {
   max-height: 420px;
   overflow-y: auto;
