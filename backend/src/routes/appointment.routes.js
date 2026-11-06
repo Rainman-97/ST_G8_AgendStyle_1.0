@@ -98,6 +98,82 @@ router.get('/catalogos-publicos', async (req, res) => {
   }
 });
 
+router.get('/proximas', authenticateToken, async (req, res) => {
+  const negocioId = getBusinessId(req);
+  const limite = Math.min(Math.max(Number(req.query.limite) || 5, 1), 20);
+  const periodo = ['dia', 'semana', 'mes'].includes(String(req.query.periodo)) ? String(req.query.periodo) : 'dia';
+
+  if (!negocioId) {
+    return res.status(403).json({ ok: false, message: 'El usuario no tiene un negocio asociado.' });
+  }
+
+  try {
+    const pool = await getConnection();
+    const rangeCondition = periodo === 'dia'
+      ? 'CAST(c.FechaHoraInicio AS DATE) = CAST(SYSDATETIME() AS DATE)'
+      : periodo === 'semana'
+        ? 'c.FechaHoraInicio >= SYSDATETIME() AND c.FechaHoraInicio < DATEADD(DAY, 7, SYSDATETIME())'
+        : 'c.FechaHoraInicio >= SYSDATETIME() AND c.FechaHoraInicio < DATEADD(MONTH, 1, DATEFROMPARTS(YEAR(SYSDATETIME()), MONTH(SYSDATETIME()), 1))';
+
+    const result = await pool.request()
+      .input('NegocioId', sql.Int, negocioId)
+      .input('Limite', sql.Int, limite)
+      .query(`
+        SELECT TOP (@Limite)
+          c.CitaId, c.FechaHoraInicio, c.FechaHoraFin, c.Estado, c.Observaciones,
+          CONCAT(cl.Nombres, ' ', cl.Apellidos) AS Cliente,
+          CONCAT(e.Nombres, ' ', e.Apellidos) AS Estilista,
+          s.Nombre AS Servicio
+        FROM dbo.Citas AS c
+        INNER JOIN dbo.Clientes AS cl ON cl.ClienteId = c.ClienteId
+        INNER JOIN dbo.Estilistas AS e ON e.EstilistaId = c.EstilistaId
+        INNER JOIN dbo.Servicios AS s ON s.ServicioId = c.ServicioId
+        WHERE c.NegocioId = @NegocioId
+          AND c.Estado NOT IN ('Cancelada', 'No asistió')
+          AND ${rangeCondition}
+        ORDER BY c.FechaHoraInicio;
+      `);
+
+    return res.json({ ok: true, periodo, citas: result.recordset });
+  } catch (error) {
+    return res.status(500).json({ ok: false, message: 'No fue posible cargar las próximas citas.', detail: error.message });
+  }
+});
+
+router.get('/historial', authenticateToken, async (req, res) => {
+  const negocioId = getBusinessId(req);
+  const limite = Math.min(Math.max(Number(req.query.limite) || 100, 1), 500);
+
+  if (!negocioId) {
+    return res.status(403).json({ ok: false, message: 'El usuario no tiene un negocio asociado.' });
+  }
+
+  try {
+    const pool = await getConnection();
+    const result = await pool.request()
+      .input('NegocioId', sql.Int, negocioId)
+      .input('Limite', sql.Int, limite)
+      .query(`
+        SELECT TOP (@Limite)
+          c.CitaId, c.FechaHoraInicio, c.FechaHoraFin, c.Estado, c.Observaciones,
+          CONCAT(cl.Nombres, ' ', cl.Apellidos) AS Cliente,
+          CONCAT(e.Nombres, ' ', e.Apellidos) AS Estilista,
+          s.Nombre AS Servicio,
+          s.Precio
+        FROM dbo.Citas AS c
+        INNER JOIN dbo.Clientes AS cl ON cl.ClienteId = c.ClienteId
+        INNER JOIN dbo.Estilistas AS e ON e.EstilistaId = c.EstilistaId
+        INNER JOIN dbo.Servicios AS s ON s.ServicioId = c.ServicioId
+        WHERE c.NegocioId = @NegocioId
+        ORDER BY c.FechaHoraInicio DESC;
+      `);
+
+    return res.json({ ok: true, citas: result.recordset });
+  } catch (error) {
+    return res.status(500).json({ ok: false, message: 'No fue posible cargar el historial de citas.', detail: error.message });
+  }
+});
+
 router.get('/', authenticateToken, async (req, res) => {
   const negocioId = getBusinessId(req);
   const fecha = req.query.fecha || new Date().toISOString().slice(0, 10);
@@ -219,9 +295,20 @@ router.post('/', authenticateToken, async (req, res) => {
         .input('Fin', sql.DateTime2(0), end)
         .input('Observaciones', sql.NVarChar(300), observaciones)
         .query(`
+          DECLARE @NuevaCita TABLE
+          (
+            CitaId INT,
+            FechaHoraInicio DATETIME2(0),
+            FechaHoraFin DATETIME2(0),
+            Estado VARCHAR(20)
+          );
+
           INSERT INTO dbo.Citas (NegocioId, ClienteId, EstilistaId, ServicioId, FechaHoraInicio, FechaHoraFin, Estado, Observaciones)
           OUTPUT INSERTED.CitaId, INSERTED.FechaHoraInicio, INSERTED.FechaHoraFin, INSERTED.Estado
-          VALUES (@NegocioId, @ClienteId, @EstilistaId, @ServicioId, @Inicio, @Fin, 'Pendiente', @Observaciones)
+          INTO @NuevaCita (CitaId, FechaHoraInicio, FechaHoraFin, Estado)
+          VALUES (@NegocioId, @ClienteId, @EstilistaId, @ServicioId, @Inicio, @Fin, 'Pendiente', @Observaciones);
+
+          SELECT CitaId, FechaHoraInicio, FechaHoraFin, Estado FROM @NuevaCita;
         `);
 
       const appointment = appointmentResult.recordset[0];
@@ -346,9 +433,20 @@ router.post('/reservar', async (req, res) => {
         .input('Fin', sql.DateTime2(0), end)
         .input('Observaciones', sql.NVarChar(300), observaciones)
         .query(`
+          DECLARE @NuevaCita TABLE
+          (
+            CitaId INT,
+            FechaHoraInicio DATETIME2(0),
+            FechaHoraFin DATETIME2(0),
+            Estado VARCHAR(20)
+          );
+
           INSERT INTO dbo.Citas (NegocioId, ClienteId, EstilistaId, ServicioId, FechaHoraInicio, FechaHoraFin, Estado, Observaciones)
           OUTPUT INSERTED.CitaId, INSERTED.FechaHoraInicio, INSERTED.FechaHoraFin, INSERTED.Estado
-          VALUES (@NegocioId, @ClienteId, @EstilistaId, @ServicioId, @Inicio, @Fin, 'Pendiente', @Observaciones)
+          INTO @NuevaCita (CitaId, FechaHoraInicio, FechaHoraFin, Estado)
+          VALUES (@NegocioId, @ClienteId, @EstilistaId, @ServicioId, @Inicio, @Fin, 'Pendiente', @Observaciones);
+
+          SELECT CitaId, FechaHoraInicio, FechaHoraFin, Estado FROM @NuevaCita;
         `);
 
       const appointment = appointmentResult.recordset[0];
@@ -385,10 +483,15 @@ router.patch('/:id/cancelar', authenticateToken, async (req, res) => {
       .input('CitaId', sql.Int, citaId)
       .input('NegocioId', sql.Int, negocioId)
       .query(`
+        DECLARE @CitaActualizada TABLE (CitaId INT, Estado VARCHAR(20));
+
         UPDATE dbo.Citas
         SET Estado = 'Cancelada'
         OUTPUT INSERTED.CitaId, INSERTED.Estado
-        WHERE CitaId = @CitaId AND NegocioId = @NegocioId AND Estado <> 'Atendida'
+        INTO @CitaActualizada (CitaId, Estado)
+        WHERE CitaId = @CitaId AND NegocioId = @NegocioId AND Estado <> 'Atendida';
+
+        SELECT CitaId, Estado FROM @CitaActualizada;
       `);
 
     if (result.recordset.length === 0) {
@@ -418,10 +521,15 @@ router.patch('/:id/estado', authenticateToken, async (req, res) => {
       .input('NegocioId', sql.Int, negocioId)
       .input('Estado', sql.VarChar(20), estado)
       .query(`
+        DECLARE @CitaActualizada TABLE (CitaId INT, Estado VARCHAR(20));
+
         UPDATE dbo.Citas
         SET Estado = @Estado
         OUTPUT INSERTED.CitaId, INSERTED.Estado
-        WHERE CitaId = @CitaId AND NegocioId = @NegocioId AND Estado <> 'Cancelada'
+        INTO @CitaActualizada (CitaId, Estado)
+        WHERE CitaId = @CitaId AND NegocioId = @NegocioId AND Estado <> 'Cancelada';
+
+        SELECT CitaId, Estado FROM @CitaActualizada;
       `);
 
     if (result.recordset.length === 0) {
