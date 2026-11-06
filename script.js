@@ -9,6 +9,7 @@ const storedUser = localStorage.getItem('agendaStyleUser');
 const currentUser = storedUser ? JSON.parse(storedUser) : null;
 let upcomingPeriod = 'dia';
 let selectedAgendaDate = null;
+let calendarSelectionActive = false;
 
 if (currentUser) {
   const fullName = `${currentUser.nombres || ''} ${currentUser.apellidos || ''}`.trim();
@@ -222,12 +223,12 @@ function bindAppointmentActions(container) {
   });
 }
 
-function renderAppointments(citas) {
+function renderAppointments(citas, emptyMessage = 'No hay próximas citas registradas.') {
   const container = document.querySelector('#appointment-list') || document.querySelector('.appointment-list');
   if (!container) return;
   container.innerHTML = '';
   if (!citas.length) {
-    renderEmpty(container, 'No hay próximas citas registradas.');
+    renderEmpty(container, emptyMessage);
     return;
   }
 
@@ -294,7 +295,10 @@ function renderCalendar(dateValue, datesWithAppointments) {
     cell.textContent = day;
     cell.dataset.date = key;
     cell.title = 'Ver agenda de este día';
-    cell.addEventListener('click', () => loadDashboardData(key));
+    cell.addEventListener('click', () => {
+      calendarSelectionActive = true;
+      loadDashboardData(key);
+    });
     if (key === today) cell.classList.add('selected');
     if (appointmentDates.has(key)) cell.innerHTML += '<i></i>';
     calendar.appendChild(cell);
@@ -317,6 +321,7 @@ function setupUpcomingFilter() {
   original.replaceWith(select);
   select.addEventListener('change', async () => {
     upcomingPeriod = select.value;
+    calendarSelectionActive = false;
     const list = document.querySelector('#appointment-list') || document.querySelector('.appointment-list');
     if (list) renderEmpty(list, 'Cargando próximas citas...');
     try {
@@ -559,11 +564,21 @@ async function loadDashboardData(requestedDate = null) {
     updateCard(3, summary.clientesRegistrados, summary.clientesRegistrados ? 'Clientes activos del negocio' : 'Sin clientes registrados');
     const agendaLabel = document.querySelector('#today-agenda-label') || document.querySelector('.section-heading p');
     if (agendaLabel) agendaLabel.textContent = formatDateLabel(date);
+    const appointmentsLabel = document.querySelector('.appointment-panel .panel-header p');
+    if (appointmentsLabel) {
+      appointmentsLabel.textContent = calendarSelectionActive
+        ? `Citas del ${formatDateLabel(date)}`
+        : 'Próximas citas del negocio';
+    }
     const next = summary.proximaCita;
     updateCard(2, next ? new Date(next.FechaHoraInicio).toLocaleTimeString('es-CO', { hour: '2-digit', minute: '2-digit', hour12: false }) : '--', next ? `${next.Cliente} · ${next.Servicio}` : 'No hay próximas citas');
     renderCalendar(date, summary.fechasConCitas);
     clearFakeReminderSummary();
-    await loadUpcomingAppointments();
+    if (calendarSelectionActive) {
+      renderAppointments(agenda.citas || [], 'No hay citas registradas para esta fecha.');
+    } else {
+      await loadUpcomingAppointments();
+    }
     renderTeam(team.equipo || []);
   } catch (error) {
     console.error('No se pudo cargar el dashboard:', error);
