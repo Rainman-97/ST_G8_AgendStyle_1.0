@@ -280,6 +280,23 @@ body {
 .primary-button:hover {
   background: #188452;
 }
+.management-options {
+  display: grid;
+  gap: 12px;
+  margin-top: 22px;
+}
+.secondary-button {
+  min-height: 44px;
+  border: 1px solid #cbd6e4;
+  border-radius: 8px;
+  background: #f5f7fa;
+  color: var(--navy);
+  font: 700 12px 'DM Sans', sans-serif;
+  cursor: pointer;
+}
+.secondary-button:hover {
+  background: #e9eff7;
+}
 .primary-button span {
   font-size: 20px;
   vertical-align: -1px;
@@ -1431,6 +1448,24 @@ body {
 .cancel-appointment:disabled {
   opacity: .55;
   cursor: wait;
+}
+.cancellation-modal form {
+  display: grid;
+  gap: 4px;
+}
+.cancellation-modal textarea,
+.cancellation-modal select {
+  width: 100%;
+  border: 1px solid #dce3eb;
+  border-radius: 7px;
+  padding: 11px 12px;
+  margin-top: 7px;
+  font: 12px 'DM Sans', sans-serif;
+  color: #33435c;
+  background: #fff;
+}
+.cancellation-modal textarea {
+  resize: vertical;
 }
 
 .agenda-full-row .appointment-actions {

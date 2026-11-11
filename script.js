@@ -219,9 +219,42 @@ async function changeAppointmentState(citaId, estado) {
   await loadDashboardData();
 }
 
-async function cancelAppointment(citaId) {
+async function legacyCancelAppointment(citaId) {
   if (!window.confirm('¿Deseas cancelar esta cita?')) return;
   await apiRequest(`/citas/${citaId}/cancelar`, { method: 'PATCH' });
+  showToast('Cita cancelada correctamente.');
+  const historyModal = document.querySelector('#agenda-full-modal');
+  if (historyModal) historyModal.hidden = true;
+  await loadDashboardData();
+}
+
+function requestCancellationDetails() {
+  return new Promise((resolve) => {
+    const backdrop = document.createElement('div');
+    backdrop.className = 'modal-backdrop';
+    backdrop.innerHTML = '<div class="modal cancellation-modal" role="dialog" aria-modal="true"><button class="close-modal" type="button" aria-label="Cerrar">×</button><p class="eyebrow">CANCELACIÓN DE CITA</p><h2>¿Por qué se cancela?</h2><p class="modal-subtitle">Registra la causa y la acción propuesta para conservar el historial.</p><form><label>Motivo<select name="motivo" required><option value="">Selecciona un motivo</option><option>Cliente solicitó cancelación</option><option>Negocio no disponible</option><option>Reprogramación</option><option>Datos incorrectos</option><option>No asistencia</option><option>Otro</option></select></label><label>Descripción<textarea name="descripcion" minlength="10" maxlength="500" rows="3" placeholder="Explica brevemente la situación" required></textarea></label><label>Solución o acción propuesta<select name="solucion" required><option value="">Selecciona una opción</option><option>Reprogramar cita</option><option>Contactar al cliente</option><option>Liberar horario</option><option>Sin solución</option></select></label><button class="primary-button full" type="submit">Confirmar cancelación</button><p class="form-message"></p></form></div>';
+    document.body.appendChild(backdrop);
+    const close = (value = null) => { backdrop.remove(); resolve(value); };
+    backdrop.querySelector('.close-modal').addEventListener('click', () => close());
+    backdrop.addEventListener('click', (event) => { if (event.target === backdrop) close(); });
+    backdrop.querySelector('form').addEventListener('submit', (event) => {
+      event.preventDefault();
+      const data = Object.fromEntries(new FormData(event.currentTarget));
+      if (data.descripcion.trim().length < 10) {
+        const message = event.currentTarget.querySelector('.form-message');
+        message.textContent = 'Describe la situación con al menos 10 caracteres.';
+        message.className = 'form-message error';
+        return;
+      }
+      close(data);
+    });
+  });
+}
+
+async function cancelAppointment(citaId) {
+  const details = await requestCancellationDetails();
+  if (!details) return;
+  await apiRequest(`/citas/${citaId}/cancelar`, { method: 'PATCH', body: JSON.stringify(details) });
   showToast('Cita cancelada correctamente.');
   const historyModal = document.querySelector('#agenda-full-modal');
   if (historyModal) historyModal.hidden = true;
@@ -525,7 +558,7 @@ function setupDashboardInteractions() {
       const target = item.getAttribute('href');
       if (target === '#clientes') {
         event.preventDefault();
-        createManagementModal('cliente').hidden = false;
+        openClientOptions();
       } else if (target === '#servicios') {
         event.preventDefault();
         createManagementModal('servicio').hidden = false;
@@ -568,6 +601,7 @@ function createTeamModal() {
     input.addEventListener('input', () => { input.value = input.value.replace(/[^\p{L}\p{M} ]/gu, ''); });
   });
   const specialtyInput = formElement.querySelector('input[name="especialidad"]');
+  specialtyInput.pattern = '[A-Za-zÀ-ÿ0-9 .&+/-]{2,80}';
   specialtyInput.addEventListener('input', () => { specialtyInput.value = specialtyInput.value.replace(/[^\p{L}\p{M} .&\/-]/gu, ''); });
   const phoneInput = formElement.querySelector('input[name="telefono"]');
   phoneInput.inputMode = 'numeric';
@@ -644,6 +678,58 @@ async function openTeamDirectory(event) {
   }
 }
 
+function openClientOptions() {
+  if (!document.querySelector('#client-options-modal')) {
+    const modal = document.createElement('div');
+    modal.className = 'modal-backdrop';
+    modal.id = 'client-options-modal';
+    modal.hidden = true;
+    modal.innerHTML = '<div class="modal" role="dialog" aria-modal="true"><button class="close-modal" type="button" aria-label="Cerrar">×</button><p class="eyebrow">GESTIÓN DEL NEGOCIO</p><h2>Clientes</h2><p class="modal-subtitle">Administra los clientes registrados en tu negocio.</p><div class="management-options"><button type="button" class="primary-button full" data-client-action="add">Agregar cliente</button><button type="button" class="secondary-button full" data-client-action="view">Ver clientes</button></div></div>';
+    document.body.appendChild(modal);
+    modal.querySelector('.close-modal').addEventListener('click', () => { modal.hidden = true; });
+    modal.addEventListener('click', (event) => { if (event.target === modal) modal.hidden = true; });
+    modal.querySelector('[data-client-action="add"]').addEventListener('click', () => {
+      modal.hidden = true;
+      createManagementModal('cliente').hidden = false;
+    });
+    modal.querySelector('[data-client-action="view"]').addEventListener('click', () => {
+      modal.hidden = true;
+      openClientDirectory();
+    });
+  }
+  document.querySelector('#client-options-modal').hidden = false;
+}
+
+function openClientDirectory() {
+  if (!document.querySelector('#client-directory-modal')) {
+    const modal = document.createElement('div');
+    modal.className = 'modal-backdrop';
+    modal.id = 'client-directory-modal';
+    modal.hidden = true;
+    modal.innerHTML = '<div class="modal team-directory-modal" role="dialog" aria-modal="true"><button class="close-modal" type="button" aria-label="Cerrar">×</button><p class="eyebrow">CLIENTES DEL NEGOCIO</p><h2>Ver clientes</h2><p class="modal-subtitle">Clientes activos registrados actualmente.</p><div class="team-directory-list"></div><button class="primary-button full add-client-from-directory" type="button">Agregar cliente</button></div>';
+    document.body.appendChild(modal);
+    modal.querySelector('.close-modal').addEventListener('click', () => { modal.hidden = true; });
+    modal.addEventListener('click', (event) => { if (event.target === modal) modal.hidden = true; });
+    modal.querySelector('.add-client-from-directory').addEventListener('click', () => {
+      modal.hidden = true;
+      createManagementModal('cliente').hidden = false;
+    });
+  }
+  const modal = document.querySelector('#client-directory-modal');
+  const list = modal.querySelector('.team-directory-list');
+  modal.hidden = false;
+  renderEmpty(list, 'Cargando clientes...');
+  apiRequest('/dashboard/clientes').then((data) => {
+    if (!data.clientes.length) return renderEmpty(list, 'Aún no hay clientes registrados.');
+    list.innerHTML = data.clientes.map((client) => `<article class="team-directory-row"><div class="team-avatar blue-avatar">${initials(`${client.Nombres} ${client.Apellidos}`)}</div><div><strong>${client.Nombres} ${client.Apellidos}</strong><small>${client.Email || 'Sin correo registrado'}</small><small>${client.Telefono || 'Sin teléfono registrado'}</small></div><em>Activo</em></article>`).join('');
+  }).catch((error) => renderEmpty(list, error.message || 'No fue posible cargar los clientes.'));
+}
+
+function showFormError(message, text) {
+  message.textContent = text;
+  message.className = 'form-message error';
+}
+
 function createManagementModal(type) {
   const isClient = type === 'cliente';
   const id = `${type}-management-modal`;
@@ -654,13 +740,36 @@ function createManagementModal(type) {
   modalElement.hidden = true;
   modalElement.innerHTML = `<div class="modal" role="dialog" aria-modal="true"><button class="close-modal" type="button" aria-label="Cerrar">×</button><p class="eyebrow">GESTIÓN DEL NEGOCIO</p><h2>${isClient ? 'Agregar cliente' : 'Agregar servicio'}</h2><p class="modal-subtitle">Los datos se guardarán en el negocio actual.</p><form><label>Nombre<input name="${isClient ? 'nombres' : 'nombre'}" required></label>${isClient ? '<label>Apellidos<input name="apellidos" required></label><label>Teléfono<input name="telefono" required></label><label>Correo electrónico<input name="email" type="email"></label>' : '<label>Descripción<input name="descripcion"></label><label>Duración en minutos<input name="duracionMinutos" type="number" min="1" required></label><label>Precio<input name="precio" type="number" min="0" step="0.01" required></label>'}<button class="primary-button full" type="submit">Guardar</button><p class="form-message"></p></form></div>`;
   document.body.appendChild(modalElement);
+  const managementForm = modalElement.querySelector('form');
+  const managementMessage = managementForm.querySelector('.form-message');
+  const personNamePattern = /^[\p{L}\p{M} ]{2,80}$/u;
+  const serviceNamePattern = /^[\p{L}\p{M}0-9 .&+/'-]{2,100}$/u;
+  if (isClient) {
+    managementForm.querySelectorAll('input[name="nombres"], input[name="apellidos"]').forEach((input) => input.addEventListener('input', () => { input.value = input.value.replace(/[^\p{L}\p{M} ]/gu, ''); }));
+    const phoneInput = managementForm.querySelector('input[name="telefono"]');
+    phoneInput.inputMode = 'numeric';
+    phoneInput.maxLength = 10;
+    phoneInput.placeholder = '3000000000';
+    phoneInput.addEventListener('input', () => { phoneInput.value = phoneInput.value.replace(/\D/g, '').slice(0, 10); });
+    const emailInput = managementForm.querySelector('input[name="email"]');
+    emailInput.placeholder = 'correo@gmail.com';
+    emailInput.addEventListener('input', () => { emailInput.value = emailInput.value.toLowerCase().replace(/\s/g, ''); });
+  } else {
+    const serviceInput = managementForm.querySelector('input[name="nombre"]');
+    serviceInput.addEventListener('input', () => { serviceInput.value = serviceInput.value.replace(/[^\p{L}\p{M}0-9 .&+/'-]/gu, ''); });
+  }
   modalElement.querySelector('.close-modal').addEventListener('click', () => { modalElement.hidden = true; });
-  modalElement.querySelector('form').addEventListener('submit', async (event) => {
+  managementForm.addEventListener('submit', async (event) => {
     event.preventDefault();
     const formElement = event.currentTarget;
     const message = formElement.querySelector('.form-message');
+    const data = Object.fromEntries(new FormData(formElement));
+    if (isClient && (!personNamePattern.test(data.nombres.trim()) || !personNamePattern.test(data.apellidos.trim()))) return showFormError(managementMessage, 'Nombres y apellidos solo pueden contener letras y espacios.');
+    if (isClient && !/^3\d{9}$/.test(data.telefono)) return showFormError(managementMessage, 'El teléfono debe tener 10 dígitos y comenzar por 3.');
+    if (isClient && data.email && !/^[^\s@]+@gmail\.com$/i.test(data.email)) return showFormError(managementMessage, 'El correo debe terminar en @gmail.com.');
+    if (!isClient && (!serviceNamePattern.test(data.nombre.trim()) || Number(data.duracionMinutos) <= 0 || !Number.isFinite(Number(data.precio)) || Number(data.precio) < 0)) return showFormError(managementMessage, 'Revisa el nombre, duración y precio del servicio.');
     try {
-      await apiRequest(`/dashboard/${isClient ? 'clientes' : 'servicios'}`, { method: 'POST', body: JSON.stringify(Object.fromEntries(new FormData(formElement))) });
+      await apiRequest(`/dashboard/${isClient ? 'clientes' : 'servicios'}`, { method: 'POST', body: JSON.stringify(data) });
       formElement.reset();
       modalElement.hidden = true;
       await loadAppointmentCatalogs();
