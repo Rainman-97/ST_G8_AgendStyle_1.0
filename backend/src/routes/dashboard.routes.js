@@ -130,7 +130,7 @@ router.get('/equipo', async (req, res) => {
               WHERE c.EstilistaId = e.EstilistaId
                 AND c.NegocioId = @NegocioId
                 AND CAST(c.FechaHoraInicio AS DATE) = @Fecha
-                AND c.Estado NOT IN ('Cancelada', 'No asistió')
+                AND c.Estado NOT IN ('Cancelada', 'No asistió', 'Atendida')
                 AND c.FechaHoraInicio <= DATEADD(HOUR, -5, SYSUTCDATETIME())
                 AND c.FechaHoraFin > DATEADD(HOUR, -5, SYSUTCDATETIME())
           ) THEN 'Ocupado'
