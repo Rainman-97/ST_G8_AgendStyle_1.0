@@ -5,6 +5,12 @@ const { authenticateToken } = require('../middleware/auth.middleware');
 
 const router = express.Router();
 
+function getBogotaDate() {
+  return new Intl.DateTimeFormat('en-CA', {
+    timeZone: 'America/Bogota', year: 'numeric', month: '2-digit', day: '2-digit'
+  }).format(new Date());
+}
+
 function normalizeEmail(email = '') {
   return String(email).trim().toLowerCase();
 }
@@ -127,7 +133,7 @@ router.get('/proximas', authenticateToken, async (req, res) => {
   const periodo = ['dia', 'semana', 'mes'].includes(String(req.query.periodo)) ? String(req.query.periodo) : 'dia';
   const fecha = /^\d{4}-\d{2}-\d{2}$/.test(String(req.query.fecha || ''))
     ? String(req.query.fecha)
-    : new Date().toISOString().slice(0, 10);
+    : getBogotaDate();
 
   if (!negocioId) {
     return res.status(403).json({ ok: false, message: 'El usuario no tiene un negocio asociado.' });
@@ -238,7 +244,7 @@ router.get('/pendientes', authenticateToken, async (req, res) => {
 
 router.get('/', authenticateToken, async (req, res) => {
   const negocioId = getBusinessId(req);
-  const fecha = req.query.fecha || new Date().toISOString().slice(0, 10);
+  const fecha = req.query.fecha || getBogotaDate();
 
   if (!negocioId) {
     return res.status(403).json({ ok: false, message: 'El usuario no tiene un negocio asociado.' });

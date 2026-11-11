@@ -5,6 +5,12 @@ const { authenticateToken } = require('../middleware/auth.middleware');
 
 const router = express.Router();
 
+function getBogotaDate() {
+  return new Intl.DateTimeFormat('en-CA', {
+    timeZone: 'America/Bogota', year: 'numeric', month: '2-digit', day: '2-digit'
+  }).format(new Date());
+}
+
 function getBusinessId(req) {
   const businessId = Number(req.user?.negocioId);
   return Number.isInteger(businessId) && businessId > 0 ? businessId : null;
@@ -37,7 +43,7 @@ router.use(authenticateToken);
 
 router.get('/resumen', async (req, res) => {
   const negocioId = getBusinessId(req);
-  const fecha = req.query.fecha || new Date().toISOString().slice(0, 10);
+  const fecha = req.query.fecha || getBogotaDate();
 
   if (!negocioId) return res.status(403).json({ ok: false, message: 'El usuario no tiene un negocio asociado.' });
 
@@ -102,21 +108,81 @@ router.get('/resumen', async (req, res) => {
 
 router.get('/equipo', async (req, res) => {
   const negocioId = getBusinessId(req);
+  const fecha = /^\d{4}-\d{2}-\d{2}$/.test(String(req.query.fecha || ''))
+    ? String(req.query.fecha)
+    : getBogotaDate();
   if (!negocioId) return res.status(403).json({ ok: false, message: 'El usuario no tiene un negocio asociado.' });
 
   try {
     const pool = await getConnection();
     const result = await pool.request()
       .input('NegocioId', sql.Int, negocioId)
+      .input('Fecha', sql.Date, fecha)
       .query(`
-        SELECT EstilistaId, Nombres, Apellidos, Especialidad, Telefono, Email, Activo
-        FROM dbo.Estilistas
-        WHERE NegocioId = @NegocioId AND Activo = 1
-        ORDER BY Apellidos, Nombres;
+        SELECT
+          e.EstilistaId, e.Nombres, e.Apellidos, e.Especialidad, e.Telefono, e.Email, e.Activo,
+          COALESCE(d.Estado, 'Disponible') AS EstadoDia,
+          CASE
+            WHEN COALESCE(d.Estado, 'Disponible') <> 'Disponible' THEN COALESCE(d.Estado, 'Disponible')
+            WHEN EXISTS (
+              SELECT 1
+              FROM dbo.Citas AS c
+              WHERE c.EstilistaId = e.EstilistaId
+                AND c.NegocioId = @NegocioId
+                AND CAST(c.FechaHoraInicio AS DATE) = @Fecha
+                AND c.Estado NOT IN ('Cancelada', 'No asistió')
+                AND c.FechaHoraInicio <= DATEADD(HOUR, -5, SYSUTCDATETIME())
+                AND c.FechaHoraFin > DATEADD(HOUR, -5, SYSUTCDATETIME())
+          ) THEN 'Ocupado'
+          ELSE 'Disponible'
+          END AS EstadoActual
+        FROM dbo.Estilistas AS e
+        LEFT JOIN dbo.DisponibilidadEstilistas AS d
+          ON d.EstilistaId = e.EstilistaId AND d.Fecha = @Fecha
+        WHERE e.NegocioId = @NegocioId AND e.Activo = 1
+        ORDER BY e.Apellidos, e.Nombres;
       `);
-    return res.json({ ok: true, equipo: result.recordset });
+    return res.json({ ok: true, fecha, equipo: result.recordset });
   } catch (error) {
     return res.status(500).json({ ok: false, message: 'No fue posible cargar el equipo.', detail: error.message });
+  }
+});
+
+router.patch('/equipo/:id/disponibilidad', requireAdministrator, async (req, res) => {
+  const negocioId = getBusinessId(req);
+  const estilistaId = Number(req.params.id);
+  const fecha = String(req.body.fecha || '').trim();
+  const estado = String(req.body.estado || '').trim();
+  const estadosPermitidos = ['Disponible', 'Descanso', 'No trabaja'];
+
+  if (!negocioId || !estilistaId || !/^\d{4}-\d{2}-\d{2}$/.test(fecha) || !estadosPermitidos.includes(estado)) {
+    return res.status(400).json({ ok: false, message: 'La disponibilidad indicada no es válida.' });
+  }
+
+  try {
+    const pool = await getConnection();
+    const result = await pool.request()
+      .input('NegocioId', sql.Int, negocioId)
+      .input('EstilistaId', sql.Int, estilistaId)
+      .input('Fecha', sql.Date, fecha)
+      .input('Estado', sql.VarChar(20), estado)
+      .query(`
+        IF NOT EXISTS (SELECT 1 FROM dbo.Estilistas WHERE EstilistaId = @EstilistaId AND NegocioId = @NegocioId AND Activo = 1)
+            THROW 51000, 'El miembro del equipo no pertenece al negocio.', 1;
+
+        MERGE dbo.DisponibilidadEstilistas AS destino
+        USING (SELECT @EstilistaId AS EstilistaId, @Fecha AS Fecha) AS origen
+          ON destino.EstilistaId = origen.EstilistaId AND destino.Fecha = origen.Fecha
+        WHEN MATCHED THEN
+          UPDATE SET Estado = @Estado, FechaActualizacion = SYSDATETIME()
+        WHEN NOT MATCHED THEN
+          INSERT (EstilistaId, Fecha, Estado) VALUES (@EstilistaId, @Fecha, @Estado);
+
+        SELECT @EstilistaId AS EstilistaId, @Fecha AS Fecha, @Estado AS Estado;
+      `);
+    return res.json({ ok: true, disponibilidad: result.recordset[0] });
+  } catch (error) {
+    return res.status(500).json({ ok: false, message: 'No fue posible actualizar la disponibilidad.', detail: error.message });
   }
 });
 
