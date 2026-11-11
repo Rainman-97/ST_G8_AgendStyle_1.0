@@ -10,6 +10,22 @@ function getBusinessId(req) {
   return Number.isInteger(businessId) && businessId > 0 ? businessId : null;
 }
 
+function validPersonName(value) {
+  return /^[\p{L}\p{M} ]{2,80}$/u.test(String(value).trim());
+}
+
+function validColombianPhone(value) {
+  return /^3\d{9}$/.test(String(value).replace(/\D/g, ''));
+}
+
+function validServiceName(value) {
+  return /^[\p{L}\p{M}0-9 .&+/'-]{2,100}$/u.test(String(value).trim());
+}
+
+function validSpecialty(value) {
+  return /^[\p{L}\p{M}0-9 .&+/'-]{2,80}$/u.test(String(value).trim());
+}
+
 function requireAdministrator(req, res, next) {
   if (req.user?.rol !== 'Administrador') {
     return res.status(403).json({ ok: false, message: 'Solo el administrador puede gestionar los datos del negocio.' });
@@ -126,6 +142,15 @@ router.post('/clientes', requireAdministrator, async (req, res) => {
   const apellidos = String(req.body.apellidos || '').trim();
   const telefono = String(req.body.telefono || '').trim();
   const email = req.body.email ? String(req.body.email).trim().toLowerCase() : null;
+  if (!validPersonName(nombres) || !validPersonName(apellidos)) {
+    return res.status(400).json({ ok: false, message: 'Nombres y apellidos solo pueden contener letras y espacios.' });
+  }
+  if (!validColombianPhone(telefono)) {
+    return res.status(400).json({ ok: false, message: 'El teléfono debe tener 10 dígitos y comenzar por 3.' });
+  }
+  if (email && !/^[^\s@]+@gmail\.com$/i.test(email)) {
+    return res.status(400).json({ ok: false, message: 'El correo debe terminar en @gmail.com.' });
+  }
   if (!negocioId || !nombres || !apellidos || !telefono) {
     return res.status(400).json({ ok: false, message: 'Nombres, apellidos y teléfono son obligatorios.' });
   }
@@ -150,6 +175,12 @@ router.post('/servicios', requireAdministrator, async (req, res) => {
   const descripcion = req.body.descripcion ? String(req.body.descripcion).trim() : null;
   const duracionMinutos = Number(req.body.duracionMinutos);
   const precio = Number(req.body.precio);
+  if (!validServiceName(nombre)) {
+    return res.status(400).json({ ok: false, message: 'El nombre del servicio contiene caracteres no válidos.' });
+  }
+  if (descripcion && descripcion.length > 250) {
+    return res.status(400).json({ ok: false, message: 'La descripción no puede superar 250 caracteres.' });
+  }
   if (!negocioId || !nombre || !Number.isInteger(duracionMinutos) || duracionMinutos <= 0 || !Number.isFinite(precio) || precio < 0) {
     return res.status(400).json({ ok: false, message: 'Nombre, duración y precio válido son obligatorios.' });
   }
@@ -178,6 +209,18 @@ router.post('/equipo', requireAdministrator, async (req, res) => {
 
   if (!negocioId || !nombres || !apellidos || !especialidad) {
     return res.status(400).json({ ok: false, message: 'Nombres, apellidos y especialidad son obligatorios.' });
+  }
+  if (!validSpecialty(especialidad)) {
+    return res.status(400).json({ ok: false, message: 'La especialidad contiene caracteres no válidos.' });
+  }
+  if (!validPersonName(nombres) || !validPersonName(apellidos)) {
+    return res.status(400).json({ ok: false, message: 'Nombres y apellidos solo pueden contener letras y espacios.' });
+  }
+  if (telefono && !validColombianPhone(telefono)) {
+    return res.status(400).json({ ok: false, message: 'El teléfono debe tener 10 dígitos y comenzar por 3.' });
+  }
+  if (email && !/^[^\s@]+@gmail\.com$/i.test(email)) {
+    return res.status(400).json({ ok: false, message: 'El correo debe terminar en @gmail.com.' });
   }
 
   try {
