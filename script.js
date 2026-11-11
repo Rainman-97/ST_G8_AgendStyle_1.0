@@ -756,7 +756,19 @@ function createManagementModal(type) {
     emailInput.addEventListener('input', () => { emailInput.value = emailInput.value.toLowerCase().replace(/\s/g, ''); });
   } else {
     const serviceInput = managementForm.querySelector('input[name="nombre"]');
+    serviceInput.maxLength = 100;
+    serviceInput.pattern = '[A-Za-zÀ-ÿ0-9 .&+/-]{2,100}';
     serviceInput.addEventListener('input', () => { serviceInput.value = serviceInput.value.replace(/[^\p{L}\p{M}0-9 .&+/'-]/gu, ''); });
+    const descriptionInput = managementForm.querySelector('input[name="descripcion"]');
+    descriptionInput.maxLength = 250;
+    const durationInput = managementForm.querySelector('input[name="duracionMinutos"]');
+    durationInput.min = '1';
+    durationInput.step = '1';
+    durationInput.inputMode = 'numeric';
+    const priceInput = managementForm.querySelector('input[name="precio"]');
+    priceInput.min = '0';
+    priceInput.step = '0.01';
+    priceInput.inputMode = 'decimal';
   }
   modalElement.querySelector('.close-modal').addEventListener('click', () => { modalElement.hidden = true; });
   managementForm.addEventListener('submit', async (event) => {
