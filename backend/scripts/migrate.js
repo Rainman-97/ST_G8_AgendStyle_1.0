@@ -7,7 +7,8 @@ const migrationFiles = [
   '02_Usuarios_Auth.sql',
   '03_Negocios_Propietarios.sql',
   '05_Citas_Transaccional.sql',
-  '06_Datos_Por_Negocio.sql'
+  '06_Datos_Por_Negocio.sql',
+  '07_Cancelaciones_Citas.sql'
 ];
 
 async function runMigrations() {
