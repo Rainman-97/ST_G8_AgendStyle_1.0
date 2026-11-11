@@ -19,7 +19,7 @@ function validColombianPhone(value) {
 }
 
 function validServiceName(value) {
-  return /^[\p{L}\p{M}0-9 .&+/'-]{2,100}$/u.test(String(value).trim());
+  return /^[\p{L}\p{M} .&+/'-]{2,100}$/u.test(String(value).trim());
 }
 
 function validSpecialty(value) {
