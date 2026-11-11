@@ -1,6 +1,4 @@
 const API_URL = 'https://agendastyle.duckdns.org/api/citas';
-const params = new URLSearchParams(window.location.search);
-const initialBusinessId = Number(params.get('negocioId')) || '';
 const selector = document.querySelector('#business-selector');
 const businessSelect = document.querySelector('#booking-business');
 const selectBusinessButton = document.querySelector('#select-business');
@@ -13,7 +11,7 @@ const dateInput = document.querySelector('#booking-date');
 const personNamePattern = /^[\p{L}\p{M} ]{2,80}$/u;
 const colombianPhonePattern = /^3\d{9}$/;
 const gmailPattern = /^[^\s@]+@gmail\.com$/i;
-let selectedBusinessId = initialBusinessId;
+let selectedBusinessId = null;
 
 dateInput.min = new Date().toISOString().slice(0, 10);
 
@@ -53,7 +51,6 @@ async function loadBusinesses() {
     if (!response.ok) throw new Error(data.message || 'No fue posible cargar los negocios.');
     businessSelect.innerHTML = '<option value="">Selecciona una peluquería o barbería</option>';
     data.negocios.forEach((business) => businessSelect.insertAdjacentHTML('beforeend', `<option value="${business.NegocioId}">${business.NombreComercial} · ${business.TipoNegocio}</option>`));
-    if (initialBusinessId && data.negocios.some((business) => business.NegocioId === initialBusinessId)) businessSelect.value = initialBusinessId;
   } catch (error) {
     businessSelect.innerHTML = '<option value="">No hay negocios disponibles</option>';
     setBusinessMessage(error.message, 'error');
