@@ -9,6 +9,14 @@ function normalizeEmail(email = '') {
   return String(email).trim().toLowerCase();
 }
 
+function validPersonName(value) {
+  return /^[A-Za-zÁÉÍÓÚáéíóúÑñÜü ]{2,80}$/.test(String(value).trim());
+}
+
+function validColombianPhone(value) {
+  return /^3\d{9}$/.test(String(value).replace(/\D/g, ''));
+}
+
 function parseDateTime(value) {
   const date = new Date(value);
   return Number.isNaN(date.getTime()) ? null : date;
@@ -95,6 +103,21 @@ router.get('/catalogos-publicos', async (req, res) => {
     });
   } catch (error) {
     return res.status(500).json({ ok: false, message: 'No fue posible cargar la información pública.', detail: error.message });
+  }
+});
+
+router.get('/negocios-publicos', async (_req, res) => {
+  try {
+    const pool = await getConnection();
+    const result = await pool.request().query(`
+      SELECT NegocioId, NombreComercial, TipoNegocio
+      FROM dbo.Negocios
+      WHERE Activo = 1
+      ORDER BY NombreComercial;
+    `);
+    return res.json({ ok: true, negocios: result.recordset });
+  } catch (error) {
+    return res.status(500).json({ ok: false, message: 'No fue posible cargar los negocios.', detail: error.message });
   }
 });
 
@@ -400,6 +423,21 @@ router.post('/reservar', async (req, res) => {
 
   if (!negocioId || !estilistaId || !servicioId || !inicio || !nombres || !apellidos || !telefono || !email) {
     return res.status(400).json({ ok: false, message: 'Completa tus datos y selecciona servicio, estilista, fecha y hora.' });
+  }
+
+  if (!validPersonName(nombres) || !validPersonName(apellidos)) {
+    return res.status(400).json({ ok: false, message: 'Nombres y apellidos solo pueden contener letras y espacios.' });
+  }
+  if (!validColombianPhone(telefono)) {
+    return res.status(400).json({ ok: false, message: 'El teléfono debe tener exactamente 10 dígitos y comenzar por 3.' });
+  }
+  if (!/^[^\s@]+@gmail\.com$/i.test(email)) {
+    return res.status(400).json({ ok: false, message: 'El correo debe terminar en @gmail.com.' });
+  }
+  const today = new Date();
+  today.setHours(0, 0, 0, 0);
+  if (inicio < today) {
+    return res.status(400).json({ ok: false, message: 'La fecha de la cita debe ser hoy o una fecha futura.' });
   }
 
   try {
