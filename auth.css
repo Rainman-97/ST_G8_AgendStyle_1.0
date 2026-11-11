@@ -325,6 +325,21 @@ body {
   font-size: 9px;
 }
 
+.password-match {
+  display: block;
+  min-height: 13px;
+  margin: -10px 0 12px 2px;
+  font-size: 9px;
+}
+
+.password-match.match-success {
+  color: var(--success);
+}
+
+.password-match.match-error {
+  color: var(--danger);
+}
+
 .password-meter[data-level="weak"] .meter-track i {
   width: 30%;
   background: #bd5b5b;
@@ -491,6 +506,134 @@ body {
 .toast.show {
   opacity: 1;
   transform: translateY(0);
+}
+
+.map-picker-backdrop {
+  position: fixed;
+  inset: 0;
+  z-index: 30;
+  display: grid;
+  place-items: center;
+  padding: 20px;
+  background: rgba(11, 27, 53, .58);
+  backdrop-filter: blur(4px);
+}
+
+.map-picker-backdrop[hidden] {
+  display: none;
+}
+
+.map-picker {
+  position: relative;
+  width: min(100%, 680px);
+  border-radius: 14px;
+  padding: 26px;
+  background: #fff;
+  box-shadow: 0 22px 60px rgba(5, 16, 33, .3);
+  animation: fade-up .25s ease both;
+}
+
+.map-close {
+  position: absolute;
+  top: 16px;
+  right: 18px;
+  border: 0;
+  background: transparent;
+  color: #9aa7b7;
+  font-size: 24px;
+  cursor: pointer;
+}
+
+.map-picker h2 {
+  margin: 0 0 6px;
+  color: var(--ink);
+  font: 800 24px 'Manrope', 'Segoe UI', sans-serif;
+}
+
+.map-subtitle {
+  margin: 0 0 15px;
+  color: var(--muted);
+  font-size: 12px;
+}
+
+.map-search {
+  display: flex;
+  gap: 8px;
+  margin-bottom: 12px;
+}
+
+.map-search input {
+  min-width: 0;
+  flex: 1;
+  height: 40px;
+  border: 1px solid var(--line);
+  border-radius: 7px;
+  padding: 0 12px;
+  color: var(--ink);
+  font: 12px 'DM Sans', sans-serif;
+  outline: none;
+}
+
+.map-search input:focus {
+  border-color: #5f7da4;
+  box-shadow: 0 0 0 3px rgba(47, 87, 133, .11);
+}
+
+.map-search button,
+.map-confirm,
+.map-secondary {
+  border: 0;
+  border-radius: 7px;
+  padding: 0 14px;
+  font: 700 11px 'DM Sans', sans-serif;
+  cursor: pointer;
+}
+
+.map-search button,
+.map-confirm {
+  color: #fff;
+  background: var(--navy);
+}
+
+.map-confirm:disabled {
+  cursor: not-allowed;
+  opacity: .45;
+}
+
+.map-secondary {
+  color: #52647b;
+  background: #edf1f6;
+}
+
+#business-map {
+  height: 310px;
+  overflow: hidden;
+  border-radius: 9px;
+  border: 1px solid var(--line);
+}
+
+.map-selected-address {
+  min-height: 32px;
+  margin: 11px 0;
+  color: #62748d;
+  font-size: 11px;
+  line-height: 1.45;
+}
+
+.map-actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 8px;
+}
+
+@media(max-width:560px) {
+  .map-picker {
+    padding: 20px;
+  }
+
+  #business-map {
+    height: 270px;
+  }
 }
 @keyframes fade-up {
   from {

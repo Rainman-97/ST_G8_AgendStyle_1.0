@@ -205,34 +205,97 @@ document.querySelector('#register-email')?.addEventListener('input', (event) => 
 
 document.querySelector('#register-password')?.addEventListener('input', (event) => updatePasswordStrength(event.target.value));
 
-document.querySelector('#locate-address')?.addEventListener('click', () => {
-  const button = document.querySelector('#locate-address');
-  const address = document.querySelector('#business-address');
-  if (!navigator.geolocation) {
-    showMessage('Tu navegador no permite obtener la ubicación automáticamente.');
-    return;
+function validatePasswordMatch() {
+  const password = document.querySelector('#register-password')?.value || '';
+  const confirmation = document.querySelector('#register-confirm-password')?.value || '';
+  const message = document.querySelector('#password-match');
+  if (!message) return false;
+  if (!confirmation) {
+    message.textContent = '';
+    message.className = 'password-match';
+    return false;
   }
-  button.disabled = true;
-  button.textContent = 'Ubicando...';
-  navigator.geolocation.getCurrentPosition(async ({ coords }) => {
-    try {
-      const response = await fetch(`https://nominatim.openstreetmap.org/reverse?format=jsonv2&lat=${coords.latitude}&lon=${coords.longitude}&accept-language=es`);
-      const data = await response.json();
-      address.value = data.display_name || `${coords.latitude.toFixed(5)}, ${coords.longitude.toFixed(5)}`;
-      address.dataset.located = 'true';
-      address.setCustomValidity('');
-      showToast('Dirección ubicada correctamente.');
-    } catch (_error) {
-      showMessage('No fue posible convertir tu ubicación en una dirección.');
-    } finally {
-      button.disabled = false;
-      button.textContent = 'Ubicarme';
+  const matches = password === confirmation;
+  message.textContent = matches ? 'Las claves coinciden.' : 'Las claves no coinciden.';
+  message.className = `password-match ${matches ? 'match-success' : 'match-error'}`;
+  return matches;
+}
+
+document.querySelector('#register-password')?.addEventListener('input', validatePasswordMatch);
+document.querySelector('#register-confirm-password')?.addEventListener('input', validatePasswordMatch);
+
+let businessMap;
+let businessMarker;
+let selectedMapAddress = '';
+
+function reverseGeocode(lat, lon) {
+  return fetch(`https://nominatim.openstreetmap.org/reverse?format=jsonv2&lat=${lat}&lon=${lon}&accept-language=es`)
+    .then((response) => response.json())
+    .then((data) => data.display_name || `${lat.toFixed(5)}, ${lon.toFixed(5)}`);
+}
+
+async function selectMapLocation(lat, lon) {
+  const selected = document.querySelector('#map-selected-address');
+  const confirm = document.querySelector('#map-confirm');
+  selected.textContent = 'Buscando dirección...';
+  confirm.disabled = true;
+  try {
+    selectedMapAddress = await reverseGeocode(lat, lon);
+    selected.textContent = selectedMapAddress;
+    confirm.disabled = false;
+  } catch (_error) {
+    selected.textContent = 'No fue posible obtener la dirección. Intenta nuevamente.';
+  }
+}
+
+function openMapPicker() {
+  const picker = document.querySelector('#map-picker');
+  picker.hidden = false;
+  if (!businessMap) {
+    businessMap = L.map('business-map').setView([4.711, -74.072], 13);
+    L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', { maxZoom: 19, attribution: '© OpenStreetMap' }).addTo(businessMap);
+    businessMap.on('click', (event) => {
+      if (businessMarker) businessMap.removeLayer(businessMarker);
+      businessMarker = L.marker(event.latlng).addTo(businessMap);
+      selectMapLocation(event.latlng.lat, event.latlng.lng);
+    });
+  }
+  setTimeout(() => businessMap.invalidateSize(), 100);
+}
+
+document.querySelector('#locate-address')?.addEventListener('click', openMapPicker);
+document.querySelector('#map-close')?.addEventListener('click', () => { document.querySelector('#map-picker').hidden = true; });
+document.querySelector('#map-cancel')?.addEventListener('click', () => { document.querySelector('#map-picker').hidden = true; });
+document.querySelector('#map-search-button')?.addEventListener('click', async () => {
+  const query = document.querySelector('#map-search-input').value.trim();
+  if (!query) return;
+  try {
+    const response = await fetch(`https://nominatim.openstreetmap.org/search?format=jsonv2&limit=1&countrycodes=co&q=${encodeURIComponent(query)}`);
+    const results = await response.json();
+    if (!results.length) {
+      document.querySelector('#map-selected-address').textContent = 'No se encontró esa dirección en Colombia.';
+      return;
     }
-  }, () => {
-    showMessage('No se pudo obtener tu ubicación. Revisa los permisos del navegador.');
-    button.disabled = false;
-    button.textContent = 'Ubicarme';
-  }, { enableHighAccuracy: true, timeout: 10000 });
+    const result = results[0];
+    const point = { lat: Number(result.lat), lng: Number(result.lon) };
+    businessMap.setView(point, 17);
+    if (businessMarker) businessMap.removeLayer(businessMarker);
+    businessMarker = L.marker(point).addTo(businessMap);
+    selectedMapAddress = result.display_name;
+    document.querySelector('#map-selected-address').textContent = selectedMapAddress;
+    document.querySelector('#map-confirm').disabled = false;
+  } catch (_error) {
+    document.querySelector('#map-selected-address').textContent = 'No fue posible buscar la dirección.';
+  }
+});
+document.querySelector('#map-confirm')?.addEventListener('click', () => {
+  if (!selectedMapAddress) return;
+  const address = document.querySelector('#business-address');
+  address.value = selectedMapAddress;
+  address.dataset.located = 'true';
+  address.setCustomValidity('');
+  document.querySelector('#map-picker').hidden = true;
+  showToast('Dirección seleccionada correctamente.');
 });
 
 document.querySelector('#business-address')?.addEventListener('input', (event) => {

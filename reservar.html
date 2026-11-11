@@ -6,15 +6,22 @@
     <title>AgendaStyle · Reservar cita</title>
     <link rel="icon" type="image/png" href="favicon.png" />
     <link rel="stylesheet" href="booking.css" />
+    <style>
+      [hidden] { display: none !important; }
+      .business-selector { animation: enter .45s ease both; }
+      .business-selector .booking-button { margin-top: 2px; }
+      .booking-button:disabled { opacity: .7; cursor: wait; transform: none; }
+    </style>
   </head>
   <body>
     <main class="booking-page">
       <section class="booking-card">
         <div class="booking-brand"><img src="Agendastyle_logo.png" alt="AgendaStyle" /></div>
-        <div class="booking-heading"><span class="eyebrow">RESERVA EN LÍNEA</span><h1 id="booking-title">Solicita tu cita</h1><p>Completa tus datos y elige el horario que prefieras.</p></div>
-        <form id="booking-form" novalidate>
-          <div class="form-grid"><label>Nombres<input name="nombres" type="text" placeholder="Tus nombres" required /></label><label>Apellidos<input name="apellidos" type="text" placeholder="Tus apellidos" required /></label></div>
-          <div class="form-grid"><label>Teléfono<input name="telefono" type="tel" placeholder="300 000 0000" required /></label><label>Correo<input name="email" type="email" placeholder="correo@ejemplo.com" required /></label></div>
+        <div class="booking-heading"><span class="eyebrow">RESERVA EN LÍNEA</span><h1 id="booking-title">Selecciona un negocio</h1><p id="booking-description">Elige la peluquería o barbería donde deseas reservar.</p></div>
+        <section class="business-selector" id="business-selector"><label for="booking-business">Peluquería o barbería<select id="booking-business"><option value="">Cargando negocios...</option></select></label><button class="booking-button" id="select-business" type="button">Continuar <b>→</b></button><p id="business-message" class="booking-message" role="status"></p></section>
+        <form id="booking-form" novalidate hidden>
+          <div class="form-grid"><label>Nombres<input name="nombres" type="text" pattern="[A-Za-zÁÉÍÓÚáéíóúÑñÜü ]{2,80}" placeholder="Tus nombres" required /></label><label>Apellidos<input name="apellidos" type="text" pattern="[A-Za-zÁÉÍÓÚáéíóúÑñÜü ]{2,80}" placeholder="Tus apellidos" required /></label></div>
+          <div class="form-grid"><label>Teléfono colombiano<input name="telefono" type="tel" inputmode="numeric" maxlength="10" pattern="3[0-9]{9}" placeholder="3000000000" required /></label><label>Correo Gmail<input name="email" type="email" placeholder="correo@gmail.com" required /></label></div>
           <div class="form-grid"><label>Servicio<select name="servicioId" id="booking-service" required><option value="">Cargando servicios...</option></select></label><label>Estilista<select name="estilistaId" id="booking-stylist" required><option value="">Cargando estilistas...</option></select></label></div>
           <div class="form-grid"><label>Fecha<input name="fecha" id="booking-date" type="date" required /></label><label>Hora<input name="hora" type="time" min="08:00" max="19:00" required /></label></div>
           <label>Observaciones <span>(opcional)</span><textarea name="observaciones" rows="3" placeholder="¿Tienes alguna solicitud especial?"></textarea></label>
