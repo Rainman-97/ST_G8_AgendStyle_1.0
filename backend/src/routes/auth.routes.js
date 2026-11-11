@@ -13,7 +13,19 @@ function normalizeEmail(email = '') {
 }
 
 function isValidEmail(email) {
-  return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email);
+  return /^[^\s@]+@gmail\.com$/i.test(email);
+}
+
+function isValidName(value) {
+  return /^[A-Za-zÁÉÍÓÚáéíóúÑñÜü ]{2,80}$/.test(String(value).trim());
+}
+
+function isValidColombianPhone(value) {
+  return /^3\d{9}$/.test(String(value).replace(/\D/g, ''));
+}
+
+function isValidAddress(value) {
+  return /^(calle|cl|carrera|cra|cr|avenida|av|diagonal|diag|transversal|trans)\s+\d+[a-z]?\s*(#|no\.?|n°)\s*\d+[a-z]?\s*-\s*\d+/i.test(String(value).trim());
 }
 
 function publicUser(user) {
@@ -53,15 +65,27 @@ router.post('/register', async (req, res) => {
   }
 
   if (!isValidEmail(email)) {
-    return res.status(400).json({ ok: false, message: 'El formato del email no es válido.' });
+    return res.status(400).json({ ok: false, message: 'El correo debe terminar en @gmail.com.' });
+  }
+
+  if (!isValidName(nombres) || !isValidName(apellidos)) {
+    return res.status(400).json({ ok: false, message: 'Nombres y apellidos solo pueden contener letras y espacios.' });
   }
 
   if (String(password).length < 8) {
     return res.status(400).json({ ok: false, message: 'La contraseña debe tener mínimo 8 caracteres.' });
   }
 
-  if (!negocio.nombreComercial || !negocio.tipoNegocio || !negocio.telefono) {
-    return res.status(400).json({ ok: false, message: 'Nombre comercial, tipo de negocio y teléfono son obligatorios.' });
+  if (!negocio.nombreComercial || !negocio.tipoNegocio || !negocio.telefono || !negocio.direccion) {
+    return res.status(400).json({ ok: false, message: 'Nombre comercial, tipo de negocio, teléfono y dirección son obligatorios.' });
+  }
+
+  if (!isValidColombianPhone(negocio.telefono)) {
+    return res.status(400).json({ ok: false, message: 'El teléfono debe tener exactamente 10 dígitos y comenzar por 3.' });
+  }
+
+  if (!isValidAddress(negocio.direccion) && negocio.ubicadaPorMapa !== true) {
+    return res.status(400).json({ ok: false, message: 'Ingresa una dirección colombiana válida, por ejemplo: Calle 10 # 20-30.' });
   }
 
   try {
