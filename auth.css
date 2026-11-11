@@ -263,6 +263,82 @@ body {
   border-color: #5f7da4;
   box-shadow: 0 0 0 3px rgba(47,87,133,.11);
 }
+
+.address-wrap {
+  margin-bottom: 4px;
+}
+
+.location-button {
+  position: absolute;
+  right: 8px;
+  border: 0;
+  border-radius: 5px;
+  padding: 7px 9px;
+  color: #31527f;
+  background: #edf1f6;
+  font: 700 10px 'DM Sans', sans-serif;
+  cursor: pointer;
+}
+
+.location-button:hover {
+  background: #dce6f2;
+}
+
+.location-button:disabled {
+  opacity: .6;
+  cursor: wait;
+}
+
+.field-hint {
+  display: block;
+  margin: -1px 0 16px 2px;
+  color: #8a96a6;
+  font-size: 9px;
+  line-height: 1.4;
+}
+
+.password-meter {
+  display: grid;
+  gap: 5px;
+  margin: -9px 0 15px;
+}
+
+.meter-track {
+  display: block;
+  height: 4px;
+  overflow: hidden;
+  border-radius: 99px;
+  background: #e7ebf0;
+}
+
+.meter-track i {
+  display: block;
+  width: 0;
+  height: 100%;
+  border-radius: inherit;
+  background: #bd5b5b;
+  transition: width .25s ease, background .25s ease;
+}
+
+.password-meter small {
+  color: #8a96a6;
+  font-size: 9px;
+}
+
+.password-meter[data-level="weak"] .meter-track i {
+  width: 30%;
+  background: #bd5b5b;
+}
+
+.password-meter[data-level="medium"] .meter-track i {
+  width: 65%;
+  background: #c38b42;
+}
+
+.password-meter[data-level="strong"] .meter-track i {
+  width: 100%;
+  background: #2e8064;
+}
 .password-toggle {
   position: absolute;
   right: 9px;
