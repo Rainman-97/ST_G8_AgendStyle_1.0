@@ -675,6 +675,23 @@ body {
   margin-left: auto;
   white-space: nowrap;
 }
+.team-availability-status.ocupado {
+  color: #bd5b5b;
+}
+.team-availability-status.descanso,
+.team-availability-status.no-trabaja {
+  color: #a27435;
+}
+.team-day-availability {
+  border: 1px solid #d9e2ed;
+  border-radius: 6px;
+  padding: 5px 7px;
+  color: #31527f;
+  background: #fff;
+  font: 600 10px 'DM Sans', sans-serif;
+  cursor: pointer;
+  margin-left: 8px;
+}
 .reminder-count {
   font-size: 10px;
   color: #278d5c;

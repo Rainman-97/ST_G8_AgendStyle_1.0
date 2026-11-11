@@ -194,6 +194,11 @@ function renderEmpty(container, message) {
   container.innerHTML = `<p class="empty-state">${message}</p>`;
 }
 
+function parseAgendaDate(value) {
+  const text = String(value || '');
+  return new Date(text.endsWith('Z') ? text.slice(0, -1) : text);
+}
+
 function appointmentActions(cita) {
   const state = String(cita.Estado || 'Pendiente');
   const isClosed = ['Cancelada', 'Atendida', 'No asistió'].includes(state);
@@ -296,7 +301,7 @@ function renderAppointments(citas, emptyMessage = 'No hay próximas citas regist
   }
 
   citas.forEach((cita, index) => {
-    const start = new Date(cita.FechaHoraInicio);
+    const start = parseAgendaDate(cita.FechaHoraInicio);
     const time = start.toLocaleTimeString('es-CO', { hour: '2-digit', minute: '2-digit', hour12: false });
     const item = document.createElement('div');
     item.className = 'appointment';
@@ -312,7 +317,7 @@ function renderAppointments(citas, emptyMessage = 'No hay próximas citas regist
   bindAppointmentActions(container);
 }
 
-function renderTeam(team) {
+function renderTeam(team, selectedDate = selectedAgendaDate) {
   const container = document.querySelector('.team-list');
   const summary = document.querySelector('#team-summary');
   if (!container) return;
@@ -326,8 +331,26 @@ function renderTeam(team) {
   team.forEach((member) => {
     const row = document.createElement('div');
     row.className = 'team-member';
-    row.innerHTML = `<div class="team-avatar blue-avatar">${initials(`${member.Nombres} ${member.Apellidos}`)}<span></span></div><div><strong>${member.Nombres} ${member.Apellidos}</strong><small>${member.Especialidad}</small></div><em>Disponible</em>`;
+    const currentState = member.EstadoActual || 'Disponible';
+    const dayState = member.EstadoDia || 'Disponible';
+    row.innerHTML = `<div class="team-avatar blue-avatar">${initials(`${member.Nombres} ${member.Apellidos}`)}<span></span></div><div><strong>${member.Nombres} ${member.Apellidos}</strong><small>${member.Especialidad}</small></div><em class="team-availability-status ${currentState.toLowerCase().replace(/\s/g, '-')}">${currentState}</em><select class="team-day-availability" data-estilista-id="${member.EstilistaId}" aria-label="Disponibilidad de ${member.Nombres}"><option value="Disponible" ${dayState === 'Disponible' ? 'selected' : ''}>Disponible</option><option value="Descanso" ${dayState === 'Descanso' ? 'selected' : ''}>Descanso</option><option value="No trabaja" ${dayState === 'No trabaja' ? 'selected' : ''}>No trabaja</option></select>`;
     container.appendChild(row);
+  });
+  container.querySelectorAll('.team-day-availability').forEach((select) => {
+    select.addEventListener('change', async () => {
+      try {
+        select.disabled = true;
+        await apiRequest(`/dashboard/equipo/${select.dataset.estilistaId}/disponibilidad`, {
+          method: 'PATCH',
+          body: JSON.stringify({ fecha: selectedDate, estado: select.value })
+        });
+        showToast('Disponibilidad actualizada.');
+        await loadDashboardData(selectedDate);
+      } catch (error) {
+        showToast(error.message);
+        select.disabled = false;
+      }
+    });
   });
 }
 
@@ -422,7 +445,7 @@ async function openFullAgenda(event) {
       return;
     }
     list.innerHTML = data.citas.map((cita) => {
-      const start = new Date(cita.FechaHoraInicio);
+      const start = parseAgendaDate(cita.FechaHoraInicio);
       return `<div class="agenda-full-row" data-appointment-id="${cita.CitaId}"><div><strong>${start.toLocaleDateString('es-CO', { day: '2-digit', month: 'short' })}</strong><span>${start.toLocaleTimeString('es-CO', { hour: '2-digit', minute: '2-digit', hour12: false })}</span></div><section><strong>${cita.Cliente}</strong><small>${cita.Servicio} · ${cita.Estilista}</small></section><em>${cita.Estado}</em>${appointmentActions(cita)}</div>`;
     }).join('');
     bindAppointmentActions(list);
@@ -469,7 +492,7 @@ async function openReminderModal() {
       return;
     }
     list.innerHTML = data.citas.map((cita) => {
-      const start = new Date(cita.FechaHoraInicio);
+      const start = parseAgendaDate(cita.FechaHoraInicio);
       const date = start.toLocaleDateString('es-CO', { day: '2-digit', month: 'short', year: 'numeric' });
       const time = start.toLocaleTimeString('es-CO', { hour: '2-digit', minute: '2-digit', hour12: false });
       return `<article class="pending-appointment"><div class="pending-appointment-main"><div class="client-avatar blue-avatar">${initials(cita.Cliente)}</div><div><strong>${cita.Cliente}</strong><small>${date} · ${time}</small><small>${cita.Servicio}</small></div><span class="pending-badge">Pendiente</span></div><div class="reminder-actions"><button type="button" class="reminder-action whatsapp-action" data-contact="WhatsApp">WhatsApp</button><button type="button" class="reminder-action call-action" data-contact="llamada">Llamar</button></div></article>`;
@@ -825,7 +848,7 @@ async function loadDashboardData(requestedDate = null) {
     const [summary, agenda, team] = await Promise.all([
       apiRequest(`/dashboard/resumen?fecha=${date}`),
       apiRequest(`/citas/?fecha=${date}`),
-      apiRequest('/dashboard/equipo')
+      apiRequest(`/dashboard/equipo?fecha=${date}`)
     ]);
     const cards = document.querySelectorAll('.stat-card');
     const updateCard = (index, value, detail) => {
@@ -847,7 +870,7 @@ async function loadDashboardData(requestedDate = null) {
         : 'Próximas citas del negocio';
     }
     const next = summary.proximaCita;
-    updateCard(2, next ? new Date(next.FechaHoraInicio).toLocaleTimeString('es-CO', { hour: '2-digit', minute: '2-digit', hour12: false }) : '--', next ? `${next.Cliente} · ${next.Servicio}` : 'No hay próximas citas');
+    updateCard(2, next ? parseAgendaDate(next.FechaHoraInicio).toLocaleTimeString('es-CO', { hour: '2-digit', minute: '2-digit', hour12: false }) : '--', next ? `${next.Cliente} · ${next.Servicio}` : 'No hay próximas citas');
     renderCalendar(date, summary.fechasConCitas);
     clearFakeReminderSummary();
     if (calendarSelectionActive) {
@@ -855,11 +878,11 @@ async function loadDashboardData(requestedDate = null) {
     } else {
       await loadUpcomingAppointments();
     }
-    renderTeam(team.equipo || []);
+    renderTeam(team.equipo || [], date);
   } catch (error) {
     console.error('No se pudo cargar el dashboard:', error);
     if (list) renderEmpty(list, 'No fue posible cargar la agenda.');
-    renderTeam([]);
+    renderTeam([], date);
   }
 }
 
