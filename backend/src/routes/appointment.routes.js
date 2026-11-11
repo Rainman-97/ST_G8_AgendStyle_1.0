@@ -153,6 +153,7 @@ router.get('/proximas', authenticateToken, async (req, res) => {
       .query(`
         SELECT TOP (@Limite)
           c.CitaId, c.FechaHoraInicio, c.FechaHoraFin, c.Estado, c.Observaciones,
+          c.MotivoCancelacion, c.DescripcionCancelacion, c.SolucionCancelacion, c.FechaCancelacion,
           CONCAT(cl.Nombres, ' ', cl.Apellidos) AS Cliente,
           CONCAT(e.Nombres, ' ', e.Apellidos) AS Estilista,
           s.Nombre AS Servicio
@@ -188,6 +189,7 @@ router.get('/historial', authenticateToken, async (req, res) => {
       .query(`
         SELECT TOP (@Limite)
           c.CitaId, c.FechaHoraInicio, c.FechaHoraFin, c.Estado, c.Observaciones,
+          c.MotivoCancelacion, c.DescripcionCancelacion, c.SolucionCancelacion, c.FechaCancelacion,
           CONCAT(cl.Nombres, ' ', cl.Apellidos) AS Cliente,
           CONCAT(e.Nombres, ' ', e.Apellidos) AS Estilista,
           s.Nombre AS Servicio,
@@ -547,8 +549,13 @@ router.post('/reservar', async (req, res) => {
 router.patch('/:id/cancelar', authenticateToken, async (req, res) => {
   const negocioId = getBusinessId(req);
   const citaId = Number(req.params.id);
+  const motivo = String(req.body.motivo || '').trim();
+  const descripcion = String(req.body.descripcion || '').trim();
+  const solucion = String(req.body.solucion || '').trim();
+  const motivosPermitidos = ['Cliente solicitó cancelación', 'Negocio no disponible', 'Reprogramación', 'Datos incorrectos', 'No asistencia', 'Otro'];
+  const solucionesPermitidas = ['Reprogramar cita', 'Contactar al cliente', 'Liberar horario', 'Sin solución'];
 
-  if (!negocioId || !citaId) {
+  if (!negocioId || !citaId || !motivosPermitidos.includes(motivo) || descripcion.length < 10 || !solucionesPermitidas.includes(solucion)) {
     return res.status(400).json({ ok: false, message: 'La cita indicada no es válida.' });
   }
 
@@ -557,11 +564,18 @@ router.patch('/:id/cancelar', authenticateToken, async (req, res) => {
     const result = await pool.request()
       .input('CitaId', sql.Int, citaId)
       .input('NegocioId', sql.Int, negocioId)
+      .input('Motivo', sql.NVarChar(100), motivo)
+      .input('Descripcion', sql.NVarChar(500), descripcion)
+      .input('Solucion', sql.NVarChar(200), solucion)
       .query(`
         DECLARE @CitaActualizada TABLE (CitaId INT, Estado VARCHAR(20));
 
         UPDATE dbo.Citas
-        SET Estado = 'Cancelada'
+        SET Estado = 'Cancelada',
+            MotivoCancelacion = @Motivo,
+            DescripcionCancelacion = @Descripcion,
+            SolucionCancelacion = @Solucion,
+            FechaCancelacion = SYSDATETIME()
         OUTPUT INSERTED.CitaId, INSERTED.Estado
         INTO @CitaActualizada (CitaId, Estado)
         WHERE CitaId = @CitaId AND NegocioId = @NegocioId AND Estado <> 'Atendida';
