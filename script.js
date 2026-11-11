@@ -561,11 +561,42 @@ function createTeamModal() {
   modalElement.innerHTML = `<div class="modal" role="dialog" aria-modal="true"><button class="close-modal" type="button" aria-label="Cerrar">×</button><p class="eyebrow">GESTIÓN DEL NEGOCIO</p><h2>Agregar miembro del equipo</h2><p class="modal-subtitle">Estos datos se guardarán en el negocio actual.</p><form id="team-form"><label>Nombres<input name="nombres" required></label><label>Apellidos<input name="apellidos" required></label><label>Especialidad<input name="especialidad" required placeholder="Ej. Estilista o Barbero"></label><label>Teléfono<input name="telefono"></label><label>Correo electrónico<input name="email" type="email"></label><button class="primary-button full" type="submit">Guardar miembro</button><p class="form-message" id="team-form-message"></p></form></div>`;
   document.body.appendChild(modalElement);
   const formElement = modalElement.querySelector('#team-form');
+  const personNamePattern = /^[\p{L}\p{M} ]{2,80}$/u;
+  const nameInputs = formElement.querySelectorAll('input[name="nombres"], input[name="apellidos"]');
+  nameInputs.forEach((input) => {
+    input.pattern = '[A-Za-zÀ-ÿ ]{2,80}';
+    input.addEventListener('input', () => { input.value = input.value.replace(/[^\p{L}\p{M} ]/gu, ''); });
+  });
+  const specialtyInput = formElement.querySelector('input[name="especialidad"]');
+  specialtyInput.addEventListener('input', () => { specialtyInput.value = specialtyInput.value.replace(/[^\p{L}\p{M} .&\/-]/gu, ''); });
+  const phoneInput = formElement.querySelector('input[name="telefono"]');
+  phoneInput.inputMode = 'numeric';
+  phoneInput.maxLength = 10;
+  phoneInput.placeholder = '3000000000';
+  phoneInput.addEventListener('input', () => { phoneInput.value = phoneInput.value.replace(/\D/g, '').slice(0, 10); });
+  const emailInput = formElement.querySelector('input[name="email"]');
+  emailInput.placeholder = 'correo@gmail.com';
+  emailInput.addEventListener('input', () => { emailInput.value = emailInput.value.toLowerCase().replace(/\s/g, ''); });
   modalElement.querySelector('.close-modal').addEventListener('click', () => { modalElement.hidden = true; });
   formElement.addEventListener('submit', async (event) => {
     event.preventDefault();
     const data = Object.fromEntries(new FormData(formElement));
     const message = formElement.querySelector('#team-form-message');
+    if (!personNamePattern.test(data.nombres.trim()) || !personNamePattern.test(data.apellidos.trim())) {
+      message.textContent = 'Nombres y apellidos solo pueden contener letras y espacios.';
+      message.className = 'form-message error';
+      return;
+    }
+    if (data.telefono && !/^3\d{9}$/.test(data.telefono)) {
+      message.textContent = 'El teléfono debe tener 10 dígitos y comenzar por 3.';
+      message.className = 'form-message error';
+      return;
+    }
+    if (data.email && !/^[^\s@]+@gmail\.com$/i.test(data.email)) {
+      message.textContent = 'El correo debe terminar en @gmail.com.';
+      message.className = 'form-message error';
+      return;
+    }
     try {
       await apiRequest('/dashboard/equipo', { method: 'POST', body: JSON.stringify(data) });
       formElement.reset();

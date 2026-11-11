@@ -166,6 +166,9 @@ body {
   align-items: center;
   justify-content: space-between;
   padding: 0 46px;
+  position: sticky;
+  top: 0;
+  z-index: 900;
 }
 .breadcrumb {
   color: #9ba7b8;
