@@ -743,7 +743,7 @@ function createManagementModal(type) {
   const managementForm = modalElement.querySelector('form');
   const managementMessage = managementForm.querySelector('.form-message');
   const personNamePattern = /^[\p{L}\p{M} ]{2,80}$/u;
-  const serviceNamePattern = /^[\p{L}\p{M}0-9 .&+/'-]{2,100}$/u;
+  const serviceNamePattern = /^[\p{L}\p{M} .&+/'-]{2,100}$/u;
   if (isClient) {
     managementForm.querySelectorAll('input[name="nombres"], input[name="apellidos"]').forEach((input) => input.addEventListener('input', () => { input.value = input.value.replace(/[^\p{L}\p{M} ]/gu, ''); }));
     const phoneInput = managementForm.querySelector('input[name="telefono"]');
@@ -757,8 +757,8 @@ function createManagementModal(type) {
   } else {
     const serviceInput = managementForm.querySelector('input[name="nombre"]');
     serviceInput.maxLength = 100;
-    serviceInput.pattern = '[A-Za-zÀ-ÿ0-9 .&+/-]{2,100}';
-    serviceInput.addEventListener('input', () => { serviceInput.value = serviceInput.value.replace(/[^\p{L}\p{M}0-9 .&+/'-]/gu, ''); });
+    serviceInput.pattern = '[A-Za-zÀ-ÿ .&+/-]{2,100}';
+    serviceInput.addEventListener('input', () => { serviceInput.value = serviceInput.value.replace(/[^\p{L}\p{M} .&+/'-]/gu, ''); });
     const descriptionInput = managementForm.querySelector('input[name="descripcion"]');
     descriptionInput.maxLength = 250;
     const durationInput = managementForm.querySelector('input[name="duracionMinutos"]');
