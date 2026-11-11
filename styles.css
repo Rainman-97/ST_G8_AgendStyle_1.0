@@ -780,9 +780,40 @@ body {
     display: none;
   }
 }
+.sidebar-overlay {
+  display: none;
+}
+
 @media(max-width:760px) {
   .sidebar {
-    display: none;
+    display: flex;
+    position: fixed;
+    inset: 0 auto 0 0;
+    width: min(82vw, 280px);
+    min-height: 100vh;
+    z-index: 1000;
+    transform: translateX(-105%);
+    transition: transform .25s ease;
+    box-shadow: 14px 0 35px rgba(7,19,39,.2);
+  }
+  .sidebar.is-open {
+    transform: translateX(0);
+  }
+  .sidebar-overlay {
+    display: block;
+    position: fixed;
+    inset: 0;
+    z-index: 999;
+    border: 0;
+    padding: 0;
+    background: rgba(7,19,39,.42);
+    opacity: 0;
+    pointer-events: none;
+    transition: opacity .25s ease;
+  }
+  .sidebar-overlay.is-visible {
+    opacity: 1;
+    pointer-events: auto;
   }
   .mobile-menu {
     display: block;

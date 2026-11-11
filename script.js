@@ -145,7 +145,37 @@ loadAppointmentCatalogs();
 document.querySelectorAll('.nav-item').forEach((item) => item.addEventListener('click', () => {
   document.querySelectorAll('.nav-item').forEach((nav) => nav.classList.remove('active'));
   item.classList.add('active');
+  closeMobileMenu();
 }));
+
+const mobileMenuButton = document.querySelector('.mobile-menu');
+const sidebar = document.querySelector('#sidebar');
+const sidebarOverlay = document.querySelector('#sidebar-overlay');
+
+function closeMobileMenu() {
+  if (!sidebar || !mobileMenuButton) return;
+  sidebar.classList.remove('is-open');
+  sidebarOverlay?.classList.remove('is-visible');
+  mobileMenuButton.setAttribute('aria-expanded', 'false');
+  mobileMenuButton.setAttribute('aria-label', 'Abrir menú');
+}
+
+if (mobileMenuButton && sidebar) {
+  mobileMenuButton.type = 'button';
+  mobileMenuButton.setAttribute('aria-controls', 'sidebar');
+  mobileMenuButton.setAttribute('aria-expanded', 'false');
+  mobileMenuButton.addEventListener('click', () => {
+    const isOpen = sidebar.classList.toggle('is-open');
+    sidebarOverlay?.classList.toggle('is-visible', isOpen);
+    mobileMenuButton.setAttribute('aria-expanded', String(isOpen));
+    mobileMenuButton.setAttribute('aria-label', isOpen ? 'Cerrar menú' : 'Abrir menú');
+  });
+}
+
+sidebarOverlay?.addEventListener('click', closeMobileMenu);
+document.addEventListener('keydown', (event) => {
+  if (event.key === 'Escape') closeMobileMenu();
+});
 
 function formatMoney(value) {
   return new Intl.NumberFormat('es-CO', { style: 'currency', currency: 'COP', maximumFractionDigits: 0 }).format(Number(value || 0));
