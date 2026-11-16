@@ -278,6 +278,84 @@ router.post('/reset-password', async (req, res) => {
   }
 });
 
+router.get('/perfil', authenticateToken, async (req, res) => {
+  try {
+    const pool = await getConnection();
+    const result = await pool.request()
+      .input('UsuarioId', sql.Int, req.user.usuarioId)
+      .query(`
+        SELECT u.UsuarioId, u.Nombres, u.Apellidos, u.Email, u.Rol, u.FechaRegistro, u.UltimoAcceso,
+               n.NegocioId, n.NombreComercial, n.TipoNegocio, n.Telefono AS TelefonoNegocio,
+               n.Direccion AS DireccionNegocio, n.Email AS EmailNegocio
+        FROM dbo.Usuarios AS u
+        LEFT JOIN dbo.Negocios AS n ON n.NegocioId = u.NegocioId
+        WHERE u.UsuarioId = @UsuarioId AND u.Activo = 1;
+      `);
+    const profile = result.recordset[0];
+    if (!profile) return res.status(404).json({ ok: false, message: 'No se encontró el perfil.' });
+    return res.json({ ok: true, perfil: profile });
+  } catch (error) {
+    return res.status(500).json({ ok: false, message: 'No fue posible cargar el perfil.', detail: error.message });
+  }
+});
+
+router.patch('/perfil', authenticateToken, async (req, res) => {
+  const nombres = String(req.body.nombres || '').trim();
+  const apellidos = String(req.body.apellidos || '').trim();
+  const email = normalizeEmail(req.body.email);
+  const negocio = req.body.negocio || {};
+  if (!isValidName(nombres) || !isValidName(apellidos)) {
+    return res.status(400).json({ ok: false, message: 'Nombres y apellidos solo pueden contener letras y espacios.' });
+  }
+  if (!isValidEmail(email)) return res.status(400).json({ ok: false, message: 'El correo debe terminar en @gmail.com.' });
+
+  try {
+    const pool = await getConnection();
+    const duplicate = await pool.request()
+      .input('Email', sql.VarChar(150), email)
+      .input('UsuarioId', sql.Int, req.user.usuarioId)
+      .query('SELECT UsuarioId FROM dbo.Usuarios WHERE Email = @Email AND UsuarioId <> @UsuarioId');
+    if (duplicate.recordset.length) return res.status(409).json({ ok: false, message: 'Ese correo ya está registrado.' });
+
+    const transaction = new sql.Transaction(pool);
+    await transaction.begin();
+    try {
+      await new sql.Request(transaction)
+        .input('UsuarioId', sql.Int, req.user.usuarioId)
+        .input('Nombres', sql.NVarChar(80), nombres)
+        .input('Apellidos', sql.NVarChar(80), apellidos)
+        .input('Email', sql.VarChar(150), email)
+        .query('UPDATE dbo.Usuarios SET Nombres = @Nombres, Apellidos = @Apellidos, Email = @Email WHERE UsuarioId = @UsuarioId');
+
+      if (req.user.negocioId && (negocio.nombreComercial || negocio.tipoNegocio || negocio.telefono || negocio.direccion)) {
+        if (negocio.telefono && !isValidColombianPhone(negocio.telefono)) throw new Error('El teléfono del negocio debe tener 10 dígitos y comenzar por 3.');
+        if (negocio.direccion && !isValidAddress(negocio.direccion) && negocio.ubicadaPorMapa !== true) throw new Error('La dirección del negocio no tiene un formato válido.');
+        await new sql.Request(transaction)
+          .input('NegocioId', sql.Int, req.user.negocioId)
+          .input('NombreComercial', sql.NVarChar(120), negocio.nombreComercial ? String(negocio.nombreComercial).trim() : null)
+          .input('TipoNegocio', sql.VarChar(30), negocio.tipoNegocio ? String(negocio.tipoNegocio).trim() : null)
+          .input('Telefono', sql.VarChar(20), negocio.telefono ? String(negocio.telefono).replace(/\D/g, '') : null)
+          .input('Direccion', sql.NVarChar(180), negocio.direccion ? String(negocio.direccion).trim() : null)
+          .query(`
+            UPDATE dbo.Negocios
+            SET NombreComercial = COALESCE(@NombreComercial, NombreComercial),
+                TipoNegocio = COALESCE(@TipoNegocio, TipoNegocio),
+                Telefono = COALESCE(@Telefono, Telefono),
+                Direccion = COALESCE(@Direccion, Direccion)
+            WHERE NegocioId = @NegocioId;
+          `);
+      }
+      await transaction.commit();
+      return res.json({ ok: true, message: 'Perfil actualizado correctamente.' });
+    } catch (transactionError) {
+      try { await transaction.rollback(); } catch (_rollbackError) { /* ya revertida */ }
+      throw transactionError;
+    }
+  } catch (error) {
+    return res.status(400).json({ ok: false, message: error.message || 'No fue posible actualizar el perfil.' });
+  }
+});
+
 router.get('/me', authenticateToken, async (req, res) => {
   return res.json({ ok: true, user: req.user });
 });
