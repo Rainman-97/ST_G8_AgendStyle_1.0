@@ -9,7 +9,7 @@
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
     <link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700&family=Manrope:wght@600;700;800&display=swap" rel="stylesheet" />
     <link rel="stylesheet" href="styles.css" />
-    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" crossorigin="" />
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/leaflet@1.9.4/dist/leaflet.css" crossorigin="anonymous" />
   </head>
   <body>
     <div class="app-shell">
@@ -104,7 +104,7 @@
     <div class="modal-backdrop" id="modal" hidden>
       <div class="modal" role="dialog" aria-modal="true" aria-labelledby="modal-title"><button class="close-modal" id="close-modal" aria-label="Cerrar">×</button><p class="eyebrow">NUEVA RESERVA</p><h2 id="modal-title">Agendar una cita</h2><p class="modal-subtitle">Completa los datos para añadir una cita a tu agenda.</p><form id="appointment-form"><label>Nombre del cliente<select id="appointment-client" name="clienteId" required><option value="">Selecciona un cliente</option></select></label><div class="form-row"><label>Fecha<input id="appointment-date" name="fecha" required type="date" value="2026-11-05" /></label><label>Hora<input id="appointment-time" name="hora" required type="time" value="15:00" /></label></div><label>Servicio<select id="appointment-service" name="servicioId" required><option value="">Selecciona un servicio</option></select></label><label>Estilista<select id="appointment-stylist" name="estilistaId" required><option value="">Selecciona un estilista</option></select></label><label>Observaciones<textarea id="appointment-notes" name="observaciones" rows="2" placeholder="Información adicional (opcional)"></textarea></label><button class="primary-button full" type="submit">Guardar cita</button></form></div>
     </div>
-    <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js" crossorigin=""></script>
+    <script src="https://cdn.jsdelivr.net/npm/leaflet@1.9.4/dist/leaflet.js" crossorigin="anonymous"></script>
     <script src="script.js"></script>
   </body>
 </html>
