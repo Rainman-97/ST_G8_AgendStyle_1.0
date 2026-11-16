@@ -1310,6 +1310,92 @@ body {
   color: #b34d43;
 }
 
+.profile-address-wrap {
+  position: relative;
+  display: flex;
+  align-items: center;
+}
+
+.profile-address-wrap input {
+  padding-right: 92px;
+}
+
+.profile-map-button {
+  position: absolute;
+  right: 7px;
+  border: 0;
+  border-radius: 6px;
+  padding: 8px 9px;
+  background: #edf2f7;
+  color: #31527f;
+  cursor: pointer;
+  font: 700 10px 'DM Sans', sans-serif;
+}
+
+.profile-map-button:hover {
+  background: #dce7f2;
+}
+
+.profile-map-backdrop {
+  z-index: 20;
+}
+
+.profile-map-modal {
+  width: min(680px, calc(100vw - 32px));
+  border-radius: 16px;
+  padding: 28px;
+  background: #fff;
+  box-shadow: 0 24px 60px rgba(11, 27, 53, .24);
+}
+
+.profile-map-modal h2 {
+  margin: 0 0 8px;
+  color: var(--ink);
+}
+
+.profile-map-search {
+  display: grid;
+  grid-template-columns: 1fr auto;
+  gap: 8px;
+  margin: 18px 0 12px;
+}
+
+.profile-map-search input,
+.profile-map-search button {
+  min-height: 38px;
+  border: 1px solid #d7e0ea;
+  border-radius: 7px;
+  padding: 0 12px;
+  font: 12px 'DM Sans', sans-serif;
+}
+
+.profile-map-search button {
+  background: #193b69;
+  color: #fff;
+  cursor: pointer;
+  font-weight: 700;
+}
+
+#profile-business-map {
+  height: 300px;
+  border-radius: 10px;
+  overflow: hidden;
+}
+
+.profile-map-selected {
+  min-height: 32px;
+  margin: 12px 0;
+  color: #687991;
+  font-size: 11px;
+  line-height: 1.45;
+}
+
+.profile-map-actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 8px;
+}
+
 .sms-action {
   background: #69758a;
 }

@@ -46,13 +46,79 @@ function createProfileModal() {
       <div class="profile-divider">DATOS DEL NEGOCIO</div>
       <label>Nombre comercial<input name="nombreComercial"></label>
       <div class="form-row"><label>Tipo de negocio<select name="tipoNegocio"><option value="Peluquería">Peluquería</option><option value="Barbería">Barbería</option><option value="Peluquería y barbería">Peluquería y barbería</option></select></label><label>Teléfono<input name="telefono" inputmode="numeric" maxlength="10"></label></div>
-      <label>Dirección<input name="direccion"></label>
+      <label>Dirección<div class="profile-address-wrap"><input name="direccion" id="profile-address"><button type="button" class="profile-map-button" id="profile-locate-address">Abrir mapa</button></div></label>
       <p class="profile-security-note">Por seguridad, la contraseña no se muestra ni se edita desde este formulario.</p>
       <button class="primary-button full" type="submit">Guardar cambios</button>
       <p class="profile-form-message" id="profile-form-message" role="status"></p>
     </form>
   </div>`;
   document.body.appendChild(backdrop);
+  const mapBackdrop = document.createElement('div');
+  mapBackdrop.className = 'modal-backdrop profile-map-backdrop';
+  mapBackdrop.id = 'profile-map-picker';
+  mapBackdrop.hidden = true;
+  mapBackdrop.innerHTML = `<div class="profile-map-modal" role="dialog" aria-modal="true" aria-labelledby="profile-map-title"><button class="close-modal" type="button" aria-label="Cerrar">×</button><p class="eyebrow">UBICACIÓN DEL NEGOCIO</p><h2 id="profile-map-title">Selecciona la dirección</h2><p class="modal-subtitle">Busca una dirección o haz clic en el mapa para ubicar tu negocio.</p><div class="profile-map-search"><input id="profile-map-search-input" type="search" placeholder="Ej. Calle 10 # 20-30, Bogotá"><button id="profile-map-search-button" type="button">Buscar</button></div><div id="profile-business-map"></div><p class="profile-map-selected" id="profile-map-selected">Aún no has seleccionado una ubicación.</p><div class="profile-map-actions"><button type="button" class="map-secondary" id="profile-map-cancel">Cancelar</button><button type="button" class="map-confirm" id="profile-map-confirm" disabled>Usar esta dirección</button></div></div>`;
+  document.body.appendChild(mapBackdrop);
+  let profileMap;
+  let profileMarker;
+  let selectedProfileAddress = '';
+  const closeMap = () => { mapBackdrop.hidden = true; };
+  const setMapLocation = async (lat, lon) => {
+    const selected = document.querySelector('#profile-map-selected');
+    const confirm = document.querySelector('#profile-map-confirm');
+    selected.textContent = 'Buscando dirección...';
+    confirm.disabled = true;
+    try {
+      const response = await fetch(`https://nominatim.openstreetmap.org/reverse?format=jsonv2&lat=${lat}&lon=${lon}&accept-language=es`);
+      const data = await response.json();
+      selectedProfileAddress = data.display_name || `${lat.toFixed(5)}, ${lon.toFixed(5)}`;
+      selected.textContent = selectedProfileAddress;
+      confirm.disabled = false;
+    } catch (_error) {
+      selected.textContent = 'No fue posible obtener la dirección.';
+    }
+  };
+  const openProfileMap = () => {
+    mapBackdrop.hidden = false;
+    if (!profileMap) {
+      profileMap = L.map('profile-business-map').setView([4.711, -74.072], 13);
+      L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', { maxZoom: 19, attribution: '© OpenStreetMap' }).addTo(profileMap);
+      profileMap.on('click', (event) => {
+        if (profileMarker) profileMap.removeLayer(profileMarker);
+        profileMarker = L.marker(event.latlng).addTo(profileMap);
+        setMapLocation(event.latlng.lat, event.latlng.lng);
+      });
+    }
+    setTimeout(() => profileMap.invalidateSize(), 100);
+  };
+  document.querySelector('#profile-locate-address').addEventListener('click', openProfileMap);
+  mapBackdrop.querySelector('.close-modal').addEventListener('click', closeMap);
+  document.querySelector('#profile-map-cancel').addEventListener('click', closeMap);
+  document.querySelector('#profile-map-search-button').addEventListener('click', async () => {
+    const query = document.querySelector('#profile-map-search-input').value.trim();
+    if (!query) return;
+    const response = await fetch(`https://nominatim.openstreetmap.org/search?format=jsonv2&limit=1&countrycodes=co&q=${encodeURIComponent(query)}`);
+    const results = await response.json();
+    if (!results.length) {
+      document.querySelector('#profile-map-selected').textContent = 'No se encontró esa dirección en Colombia.';
+      return;
+    }
+    const point = { lat: Number(results[0].lat), lng: Number(results[0].lon) };
+    profileMap.setView(point, 17);
+    if (profileMarker) profileMap.removeLayer(profileMarker);
+    profileMarker = L.marker(point).addTo(profileMap);
+    selectedProfileAddress = results[0].display_name;
+    document.querySelector('#profile-map-selected').textContent = selectedProfileAddress;
+    document.querySelector('#profile-map-confirm').disabled = false;
+  });
+  document.querySelector('#profile-map-confirm').addEventListener('click', () => {
+    if (!selectedProfileAddress) return;
+    form.direccion.value = selectedProfileAddress;
+    form.direccion.dataset.located = 'true';
+    closeMap();
+    showToast('Dirección seleccionada correctamente.');
+  });
+  form.direccion.addEventListener('input', () => { delete form.direccion.dataset.located; });
   backdrop.querySelector('.close-modal').addEventListener('click', () => { backdrop.hidden = true; });
   backdrop.addEventListener('click', (event) => { if (event.target === backdrop) backdrop.hidden = true; });
 }
@@ -95,7 +161,8 @@ document.addEventListener('submit', async (event) => {
       nombreComercial: form.nombreComercial.value.trim(),
       tipoNegocio: form.tipoNegocio.value,
       telefono: form.telefono.value.replace(/\D/g, ''),
-      direccion: form.direccion.value.trim()
+      direccion: form.direccion.value.trim(),
+      ubicadaPorMapa: form.direccion.dataset.located === 'true'
     }
   };
   try {
