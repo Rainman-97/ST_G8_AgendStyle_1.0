@@ -2,6 +2,7 @@ const express = require('express');
 
 const { sql, getConnection } = require('../config/database');
 const { authenticateToken } = require('../middleware/auth.middleware');
+const { calculateAndSaveAbsenceRisk } = require('../services/ai.service');
 
 const router = express.Router();
 
@@ -391,6 +392,10 @@ router.post('/', authenticateToken, async (req, res) => {
         `);
 
       await transaction.commit();
+      // La cita ya está confirmada en SQL Server: la predicción nunca bloquea la reserva.
+      calculateAndSaveAbsenceRisk(pool, appointment.CitaId, negocioId).catch((aiError) => {
+        console.error('No fue posible calcular el riesgo de inasistencia:', aiError.message);
+      });
       return res.status(201).json({ ok: true, message: 'Cita creada correctamente.', cita: appointment });
     } catch (transactionError) {
       // El trigger de disponibilidad puede haber hecho rollback previamente.
@@ -542,6 +547,9 @@ router.post('/reservar', async (req, res) => {
         `);
 
       await transaction.commit();
+      calculateAndSaveAbsenceRisk(pool, appointment.CitaId, negocioId).catch((aiError) => {
+        console.error('No fue posible calcular el riesgo de inasistencia:', aiError.message);
+      });
       return res.status(201).json({ ok: true, message: 'Solicitud de cita creada correctamente.', cita: appointment });
     } catch (transactionError) {
       await transaction.rollback();

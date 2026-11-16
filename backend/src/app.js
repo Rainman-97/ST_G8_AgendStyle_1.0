@@ -6,6 +6,8 @@ const healthRoutes = require('./routes/health.routes');
 const authRoutes = require('./routes/auth.routes');
 const appointmentRoutes = require('./routes/appointment.routes');
 const dashboardRoutes = require('./routes/dashboard.routes');
+const aiRoutes = require('./routes/ai.routes');
+const notificationRoutes = require('./routes/notification.routes');
 
 const app = express();
 const port = Number(process.env.PORT || 3000);
@@ -25,6 +27,8 @@ app.use('/api/health', healthRoutes);
 app.use('/api/auth', authRoutes);
 app.use('/api/citas', appointmentRoutes);
 app.use('/api/dashboard', dashboardRoutes);
+app.use('/api/ia', aiRoutes);
+app.use('/api/notificaciones', notificationRoutes);
 
 app.use((_req, res) => {
   res.status(404).json({ ok: false, message: 'Ruta no encontrada.' });
