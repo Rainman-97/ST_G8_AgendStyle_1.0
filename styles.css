@@ -210,6 +210,17 @@ body {
   align-items: center;
   gap: 9px;
 }
+
+.user-profile {
+  cursor: pointer;
+  border-radius: 10px;
+  padding: 5px 8px;
+  transition: background .2s ease;
+}
+
+.user-profile:hover {
+  background: #eef3f8;
+}
 .user-profile strong {
   font-size: 11px;
   display: block;
@@ -1260,6 +1271,43 @@ body {
 
 .call-action {
   background: #31527f;
+}
+
+.profile-modal {
+  max-width: 620px;
+}
+
+.profile-divider {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin: 18px 0 12px;
+  color: #31527f;
+  font-size: 10px;
+  font-weight: 800;
+  letter-spacing: 1.2px;
+}
+
+.profile-divider::after {
+  content: '';
+  height: 1px;
+  flex: 1;
+  background: #dfe6ee;
+}
+
+.profile-security-note,
+.profile-form-message {
+  color: #8391a4;
+  font-size: 10px;
+  line-height: 1.45;
+}
+
+.profile-form-message.success {
+  color: #2d8063;
+}
+
+.profile-form-message.error {
+  color: #b34d43;
 }
 
 .sms-action {

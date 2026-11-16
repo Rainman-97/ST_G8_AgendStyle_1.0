@@ -30,6 +30,90 @@ document.querySelector('#logout-button').addEventListener('click', () => {
   window.location.href = 'auth.html';
 });
 
+function createProfileModal() {
+  if (document.querySelector('#profile-modal')) return;
+  const backdrop = document.createElement('div');
+  backdrop.className = 'modal-backdrop';
+  backdrop.id = 'profile-modal';
+  backdrop.hidden = true;
+  backdrop.innerHTML = `<div class="modal profile-modal" role="dialog" aria-modal="true" aria-labelledby="profile-title">
+    <button class="close-modal" type="button" aria-label="Cerrar">×</button>
+    <p class="eyebrow">MI CUENTA</p><h2 id="profile-title">Perfil y datos del negocio</h2>
+    <p class="modal-subtitle">Puedes editar tus datos. La clave se administra desde recuperación de acceso.</p>
+    <form id="profile-form">
+      <div class="form-row"><label>Nombres<input name="nombres" required></label><label>Apellidos<input name="apellidos" required></label></div>
+      <label>Correo electrónico<input name="email" type="email" required></label>
+      <div class="profile-divider">DATOS DEL NEGOCIO</div>
+      <label>Nombre comercial<input name="nombreComercial"></label>
+      <div class="form-row"><label>Tipo de negocio<select name="tipoNegocio"><option value="Peluquería">Peluquería</option><option value="Barbería">Barbería</option><option value="Peluquería y barbería">Peluquería y barbería</option></select></label><label>Teléfono<input name="telefono" inputmode="numeric" maxlength="10"></label></div>
+      <label>Dirección<input name="direccion"></label>
+      <p class="profile-security-note">Por seguridad, la contraseña no se muestra ni se edita desde este formulario.</p>
+      <button class="primary-button full" type="submit">Guardar cambios</button>
+      <p class="profile-form-message" id="profile-form-message" role="status"></p>
+    </form>
+  </div>`;
+  document.body.appendChild(backdrop);
+  backdrop.querySelector('.close-modal').addEventListener('click', () => { backdrop.hidden = true; });
+  backdrop.addEventListener('click', (event) => { if (event.target === backdrop) backdrop.hidden = true; });
+}
+
+async function openProfileModal() {
+  createProfileModal();
+  const backdrop = document.querySelector('#profile-modal');
+  const form = document.querySelector('#profile-form');
+  const message = document.querySelector('#profile-form-message');
+  backdrop.hidden = false;
+  message.textContent = 'Cargando datos...';
+  try {
+    const data = await apiRequest('/auth/perfil');
+    const profile = data.perfil;
+    form.nombres.value = profile.Nombres || '';
+    form.apellidos.value = profile.Apellidos || '';
+    form.email.value = profile.Email || '';
+    form.nombreComercial.value = profile.NombreComercial || '';
+    form.tipoNegocio.value = profile.TipoNegocio || 'Peluquería';
+    form.telefono.value = profile.TelefonoNegocio || '';
+    form.direccion.value = profile.DireccionNegocio || '';
+    message.textContent = '';
+  } catch (error) {
+    message.textContent = error.message;
+  }
+}
+
+document.querySelector('.user-profile')?.addEventListener('click', openProfileModal);
+
+document.addEventListener('submit', async (event) => {
+  if (event.target.id !== 'profile-form') return;
+  event.preventDefault();
+  const form = event.target;
+  const message = document.querySelector('#profile-form-message');
+  const payload = {
+    nombres: form.nombres.value.trim(),
+    apellidos: form.apellidos.value.trim(),
+    email: form.email.value.trim().toLowerCase(),
+    negocio: {
+      nombreComercial: form.nombreComercial.value.trim(),
+      tipoNegocio: form.tipoNegocio.value,
+      telefono: form.telefono.value.replace(/\D/g, ''),
+      direccion: form.direccion.value.trim()
+    }
+  };
+  try {
+    const data = await apiRequest('/auth/perfil', { method: 'PATCH', body: JSON.stringify(payload) });
+    message.textContent = data.message;
+    message.className = 'profile-form-message success';
+    const fullName = `${payload.nombres} ${payload.apellidos}`.trim();
+    document.querySelector('#user-name').textContent = fullName;
+    document.querySelector('#welcome-name').textContent = payload.nombres.split(' ')[0];
+    const user = JSON.parse(localStorage.getItem('agendaStyleUser') || '{}');
+    localStorage.setItem('agendaStyleUser', JSON.stringify({ ...user, nombres: payload.nombres, apellidos: payload.apellidos, email: payload.email }));
+    showToast('Perfil actualizado correctamente.');
+  } catch (error) {
+    message.textContent = error.message;
+    message.className = 'profile-form-message error';
+  }
+});
+
 async function apiRequest(path, options = {}) {
   const response = await fetch(`${API_BASE}${path}`, {
     ...options,
