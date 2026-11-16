@@ -1262,6 +1262,10 @@ body {
   background: #31527f;
 }
 
+.sms-action {
+  background: #69758a;
+}
+
 .risk-action {
   background: #6f7890;
 }

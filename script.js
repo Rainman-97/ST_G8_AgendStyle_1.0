@@ -505,6 +505,12 @@ async function openReminderModal() {
       if (!citaId) return;
       const actions = card.querySelector('.reminder-actions');
       if (!actions) return;
+      const smsButton = document.createElement('button');
+      smsButton.type = 'button';
+      smsButton.className = 'reminder-action sms-action';
+      smsButton.dataset.contact = 'SMS';
+      smsButton.textContent = 'SMS';
+      actions.appendChild(smsButton);
       const riskButton = document.createElement('button');
       riskButton.type = 'button';
       riskButton.className = 'reminder-action risk-action';
@@ -537,7 +543,20 @@ async function openReminderModal() {
       if (button.classList.contains('risk-action')) return;
       button.addEventListener('click', () => {
         const clientName = button.closest('.pending-appointment').querySelector('strong').textContent;
-        window.alert(`Recordatorio enviado por ${button.dataset.contact} a ${clientName}.`);
+        const card = button.closest('.pending-appointment');
+        if (button.dataset.contact === 'WhatsApp' || button.dataset.contact === 'SMS') {
+          button.disabled = true;
+          apiRequest(`/notificaciones/citas/${card.dataset.citaId}/enviar`, {
+            method: 'POST',
+            body: JSON.stringify({ canal: button.dataset.contact })
+          }).then((data) => {
+            showToast(data.message || `Notificación enviada a ${clientName}.`);
+          }).catch((error) => {
+            showToast(error.message || 'No fue posible enviar la notificación.');
+          }).finally(() => { button.disabled = false; });
+          return;
+        }
+        window.alert(`La llamada a ${clientName} debe realizarse manualmente.`);
       });
     });
   } catch (error) {

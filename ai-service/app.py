@@ -67,11 +67,17 @@ def prediction(request: RiskRequest):
         "Medio": "Recordatorio con solicitud de confirmación",
         "Alto": "Dos recordatorios y confirmación explícita",
     }[level]
+    message = {
+        "Bajo": "Hola, te recordamos tu cita en AgendaStyle. Te esperamos.",
+        "Medio": "Hola, te recordamos tu cita en AgendaStyle. Por favor confirma tu asistencia.",
+        "Alto": "Hola, necesitamos confirmar tu cita en AgendaStyle. Responde para confirmar o solicitar un cambio.",
+    }[level]
     return {
         "ok": True,
         "probabilidad": round(probability, 4),
         "nivel": level,
         "accion": action,
+        "mensaje": message,
         "modelo": "4-5-1-demo",
         "activacionOculta": [round(value, 4) for value in hidden],
     }
