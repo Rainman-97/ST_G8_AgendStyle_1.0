@@ -32,10 +32,10 @@ async function sendTwilio(channel, phone, message) {
 }
 
 async function sendNotification(channel, phone, message) {
-  const normalizedPhone = normalizeColombianPhone(phone);
   if (notificationMode !== 'twilio') {
-    return { provider: 'Mock', providerMessageId: null, status: 'simulated', destino: normalizedPhone };
+    return { provider: 'Mock', providerMessageId: null, status: 'simulated', destino: phone || 'simulado' };
   }
+  const normalizedPhone = normalizeColombianPhone(phone);
   return sendTwilio(channel, normalizedPhone, message);
 }
 
