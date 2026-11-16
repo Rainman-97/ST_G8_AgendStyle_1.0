@@ -1,6 +1,7 @@
 const express = require('express');
 const bcrypt = require('bcryptjs');
 const jwt = require('jsonwebtoken');
+const crypto = require('node:crypto');
 
 const { sql, getConnection } = require('../config/database');
 const { authenticateToken } = require('../middleware/auth.middleware');
@@ -26,6 +27,10 @@ function isValidColombianPhone(value) {
 
 function isValidAddress(value) {
   return /^(calle|cl|carrera|cra|cr|avenida|av|diagonal|diag|transversal|trans)\s+\d+[a-z]?\s*(#|no\.?|n°)\s*\d+[a-z]?\s*-\s*\d+/i.test(String(value).trim());
+}
+
+function hashResetToken(token) {
+  return crypto.createHash('sha256').update(token).digest('hex');
 }
 
 function publicUser(user) {
@@ -178,6 +183,98 @@ router.post('/login', async (req, res) => {
     return res.json({ ok: true, message: 'Inicio de sesión exitoso.', token: createToken(user), user: publicUser(user) });
   } catch (error) {
     return res.status(500).json({ ok: false, message: 'No fue posible iniciar sesión.', detail: error.message });
+  }
+});
+
+router.post('/forgot-password', async (req, res) => {
+  const email = normalizeEmail(req.body.email);
+  if (!isValidEmail(email)) {
+    return res.status(400).json({ ok: false, message: 'Ingresa un correo @gmail.com válido.' });
+  }
+
+  try {
+    const pool = await getConnection();
+    const userResult = await pool.request()
+      .input('Email', sql.VarChar(150), email)
+      .query('SELECT UsuarioId FROM dbo.Usuarios WHERE Email = @Email AND Activo = 1');
+
+    // No revelamos si el correo está registrado.
+    if (userResult.recordset.length === 0) {
+      return res.json({ ok: true, message: 'Si el correo está registrado, podrás continuar con la recuperación.' });
+    }
+
+    const userId = userResult.recordset[0].UsuarioId;
+    const rawToken = crypto.randomBytes(32).toString('hex');
+    const tokenHash = hashResetToken(rawToken);
+
+    await pool.request()
+      .input('UsuarioId', sql.Int, userId)
+      .input('TokenHash', sql.Char(64), tokenHash)
+      .query(`
+        UPDATE dbo.TokensRecuperacionClave
+        SET UsadoEn = SYSDATETIME()
+        WHERE UsuarioId = @UsuarioId AND UsadoEn IS NULL;
+
+        INSERT INTO dbo.TokensRecuperacionClave (UsuarioId, TokenHash, ExpiraEn)
+        VALUES (@UsuarioId, @TokenHash, DATEADD(MINUTE, 15, SYSDATETIME()));
+      `);
+
+    const response = { ok: true, message: 'Se generó un código temporal de recuperación. Tiene una vigencia de 15 minutos.' };
+    if (process.env.NODE_ENV !== 'production') response.resetToken = rawToken;
+    return res.json(response);
+  } catch (error) {
+    return res.status(500).json({ ok: false, message: 'No fue posible iniciar la recuperación.', detail: error.message });
+  }
+});
+
+router.post('/reset-password', async (req, res) => {
+  const email = normalizeEmail(req.body.email);
+  const token = String(req.body.token || '').trim();
+  const password = String(req.body.password || '');
+  if (!isValidEmail(email) || !/^[a-f0-9]{64}$/i.test(token) || password.length < 8) {
+    return res.status(400).json({ ok: false, message: 'Correo, código temporal y clave válida son obligatorios.' });
+  }
+
+  try {
+    const pool = await getConnection();
+    const tokenHash = hashResetToken(token);
+    const transaction = new sql.Transaction(pool);
+    await transaction.begin();
+    try {
+      const tokenResult = await new sql.Request(transaction)
+        .input('Email', sql.VarChar(150), email)
+        .input('TokenHash', sql.Char(64), tokenHash)
+        .query(`
+          SELECT t.TokenId, t.UsuarioId
+          FROM dbo.TokensRecuperacionClave AS t WITH (UPDLOCK, HOLDLOCK)
+          INNER JOIN dbo.Usuarios AS u ON u.UsuarioId = t.UsuarioId
+          WHERE u.Email = @Email AND u.Activo = 1
+            AND t.TokenHash = @TokenHash AND t.UsadoEn IS NULL
+            AND t.ExpiraEn > SYSDATETIME();
+        `);
+      const reset = tokenResult.recordset[0];
+      if (!reset) {
+        await transaction.rollback();
+        return res.status(400).json({ ok: false, message: 'El código es inválido o ya expiró.' });
+      }
+
+      const passwordHash = await bcrypt.hash(password, 12);
+      await new sql.Request(transaction)
+        .input('UsuarioId', sql.Int, reset.UsuarioId)
+        .input('PasswordHash', sql.VarChar(255), passwordHash)
+        .input('TokenId', sql.Int, reset.TokenId)
+        .query(`
+          UPDATE dbo.Usuarios SET PasswordHash = @PasswordHash WHERE UsuarioId = @UsuarioId;
+          UPDATE dbo.TokensRecuperacionClave SET UsadoEn = SYSDATETIME() WHERE TokenId = @TokenId;
+        `);
+      await transaction.commit();
+      return res.json({ ok: true, message: 'Tu clave fue actualizada correctamente.' });
+    } catch (transactionError) {
+      try { await transaction.rollback(); } catch (_rollbackError) { /* ya revertida */ }
+      throw transactionError;
+    }
+  } catch (error) {
+    return res.status(500).json({ ok: false, message: 'No fue posible actualizar la clave.', detail: error.message });
   }
 });
 
