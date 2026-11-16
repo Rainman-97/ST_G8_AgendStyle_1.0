@@ -1343,11 +1343,19 @@ body {
 }
 
 .profile-map-modal {
+  position: relative;
   width: min(680px, calc(100vw - 32px));
   border-radius: 16px;
   padding: 28px;
   background: #fff;
   box-shadow: 0 24px 60px rgba(11, 27, 53, .24);
+}
+
+.profile-map-modal .close-modal {
+  position: absolute;
+  top: 14px;
+  right: 16px;
+  z-index: 2;
 }
 
 .profile-map-modal h2 {
