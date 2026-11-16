@@ -66,6 +66,28 @@
             </form>
           </div>
 
+          <section class="recovery-panel" id="password-recovery" hidden>
+            <button class="recovery-back" id="recovery-back" type="button">← Volver a iniciar sesión</button>
+            <p class="eyebrow">RECUPERACIÓN SEGURA</p>
+            <h2>Restablece tu clave</h2>
+            <p class="recovery-copy">Escribe tu correo y crea una nueva clave. La clave anterior no puede recuperarse.</p>
+            <form id="recovery-request-form" class="recovery-form" novalidate>
+              <label for="recovery-email">Correo electrónico</label>
+              <div class="input-wrap"><span class="input-symbol">@</span><input id="recovery-email" type="email" placeholder="correo@gmail.com" required /></div>
+              <button class="submit-button" type="submit"><span class="button-label">Continuar</span><span class="button-loader"></span><span class="button-arrow">→</span></button>
+            </form>
+            <form id="recovery-reset-form" class="recovery-form" hidden novalidate>
+              <label for="recovery-token">Código temporal</label>
+              <div class="input-wrap"><span class="input-symbol">#</span><input id="recovery-token" type="text" autocomplete="one-time-code" required /></div>
+              <label for="recovery-password">Nueva clave</label>
+              <div class="input-wrap"><span class="input-symbol">•</span><input id="recovery-password" type="password" minlength="8" placeholder="Mínimo 8 caracteres" required /></div>
+              <label for="recovery-confirm-password">Confirmar nueva clave</label>
+              <div class="input-wrap"><span class="input-symbol">•</span><input id="recovery-confirm-password" type="password" minlength="8" required /></div>
+              <small class="password-match" id="recovery-password-match" aria-live="polite"></small>
+              <button class="submit-button" type="submit"><span class="button-label">Guardar nueva clave</span><span class="button-loader"></span><span class="button-arrow">→</span></button>
+            </form>
+          </section>
+
           <p class="form-message" id="form-message" role="status"></p>
           <p class="client-booking-link">¿Eres cliente? <a href="reservar.html?negocioId=1">Solicita tu cita aquí</a></p>
         </div>

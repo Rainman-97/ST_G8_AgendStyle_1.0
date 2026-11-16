@@ -306,3 +306,58 @@ document.querySelector('#forgot-link').addEventListener('click', (event) => {
   event.preventDefault();
   showMessage('La recuperación de clave estará disponible en una próxima versión.');
 });
+
+// Flujo de recuperación. Se agrega aparte para mantener compatible el acceso existente.
+document.querySelector('#forgot-link')?.addEventListener('click', (event) => {
+  event.preventDefault();
+  document.querySelector('#form-stage').hidden = true;
+  document.querySelector('#password-recovery').hidden = false;
+  formTitle.textContent = 'Restablece tu clave';
+  formEyebrow.textContent = 'RECUPERACIÓN SEGURA';
+  formDescription.textContent = 'Crea una nueva clave para volver a entrar a tu cuenta.';
+  showMessage('');
+});
+
+document.querySelector('#recovery-back')?.addEventListener('click', () => {
+  document.querySelector('#password-recovery').hidden = true;
+  document.querySelector('#form-stage').hidden = false;
+  document.querySelector('#recovery-request-form').hidden = false;
+  document.querySelector('#recovery-reset-form').hidden = true;
+  formEyebrow.textContent = 'BIENVENIDO DE NUEVO';
+  formTitle.textContent = 'Inicia sesión';
+  formDescription.textContent = 'Accede a tu agenda y mantén todo bajo control.';
+  showMessage('');
+});
+
+document.querySelector('#recovery-request-form')?.addEventListener('submit', async (event) => {
+  event.preventDefault();
+  const email = document.querySelector('#recovery-email').value.trim().toLowerCase();
+  if (!gmailPattern.test(email)) return showMessage('Ingresa un correo @gmail.com válido.');
+  try {
+    const data = await requestAuth('forgot-password', { email });
+    document.querySelector('#recovery-request-form').hidden = true;
+    document.querySelector('#recovery-reset-form').hidden = false;
+    document.querySelector('#recovery-token').value = data.resetToken || '';
+    showMessage(data.resetToken ? `Código temporal generado: ${data.resetToken}` : data.message, 'success');
+  } catch (error) {
+    showMessage(error.message);
+  }
+});
+
+document.querySelector('#recovery-reset-form')?.addEventListener('submit', async (event) => {
+  event.preventDefault();
+  const email = document.querySelector('#recovery-email').value.trim().toLowerCase();
+  const token = document.querySelector('#recovery-token').value.trim();
+  const password = document.querySelector('#recovery-password').value;
+  const confirmation = document.querySelector('#recovery-confirm-password').value;
+  if (password.length < 8) return showMessage('La nueva clave debe tener mínimo 8 caracteres.');
+  if (password !== confirmation) return showMessage('Las claves no coinciden.');
+  try {
+    const data = await requestAuth('reset-password', { email, token, password });
+    document.querySelector('#recovery-back').click();
+    document.querySelector('#login-email').value = email;
+    showMessage(data.message, 'success');
+  } catch (error) {
+    showMessage(error.message);
+  }
+});

@@ -340,6 +340,38 @@ body {
   color: var(--danger);
 }
 
+.recovery-panel {
+  animation: formEnter .3s ease both;
+}
+
+.recovery-panel[hidden],
+.recovery-form[hidden] {
+  display: none;
+}
+
+.recovery-panel h2 {
+  margin: 0 0 8px;
+  color: var(--ink);
+  font-size: 25px;
+}
+
+.recovery-copy {
+  margin: 0 0 22px;
+  color: #8290a2;
+  font-size: 12px;
+  line-height: 1.5;
+}
+
+.recovery-back {
+  margin: 0 0 22px;
+  border: 0;
+  padding: 0;
+  background: transparent;
+  color: #31527f;
+  cursor: pointer;
+  font: 600 11px 'DM Sans', sans-serif;
+}
+
 .password-meter[data-level="weak"] .meter-track i {
   width: 30%;
   background: #bd5b5b;
