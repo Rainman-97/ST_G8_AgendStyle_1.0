@@ -92,9 +92,11 @@ function createProfileModal() {
     setTimeout(() => profileMap.invalidateSize(), 100);
   };
   document.querySelector('#profile-locate-address').addEventListener('click', openProfileMap);
-  mapBackdrop.querySelector('.close-modal').addEventListener('click', () => {
-    closeMap();
-    backdrop.hidden = true;
+  mapBackdrop.addEventListener('click', (event) => {
+    if (event.target === mapBackdrop || event.target.closest('.close-modal')) {
+      closeMap();
+      backdrop.hidden = true;
+    }
   });
   document.querySelector('#profile-map-cancel').addEventListener('click', closeMap);
   document.querySelector('#profile-map-search-button').addEventListener('click', async () => {
@@ -122,11 +124,12 @@ function createProfileModal() {
     showToast('Dirección seleccionada correctamente.');
   });
   form.direccion.addEventListener('input', () => { delete form.direccion.dataset.located; });
-  backdrop.querySelector('.close-modal').addEventListener('click', () => {
-    backdrop.hidden = true;
-    mapBackdrop.hidden = true;
+  backdrop.addEventListener('click', (event) => {
+    if (event.target === backdrop || event.target.closest('.close-modal')) {
+      backdrop.hidden = true;
+      mapBackdrop.hidden = true;
+    }
   });
-  backdrop.addEventListener('click', (event) => { if (event.target === backdrop) backdrop.hidden = true; });
 }
 
 async function openProfileModal() {
