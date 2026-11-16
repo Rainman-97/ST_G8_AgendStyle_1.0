@@ -1318,6 +1318,8 @@ body {
 
 .profile-address-wrap input {
   padding-right: 92px;
+  width: 100%;
+  box-sizing: border-box;
 }
 
 .profile-map-button {

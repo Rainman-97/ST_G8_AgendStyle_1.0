@@ -140,6 +140,7 @@ async function openProfileModal() {
     form.tipoNegocio.value = profile.TipoNegocio || 'Peluquería';
     form.telefono.value = profile.TelefonoNegocio || '';
     form.direccion.value = profile.DireccionNegocio || '';
+    if (profile.DireccionNegocio) form.direccion.dataset.located = 'true';
     message.textContent = '';
   } catch (error) {
     message.textContent = error.message;
