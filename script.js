@@ -53,6 +53,7 @@ function createProfileModal() {
     </form>
   </div>`;
   document.body.appendChild(backdrop);
+  const profileForm = document.querySelector('#profile-form');
   const mapBackdrop = document.createElement('div');
   mapBackdrop.className = 'modal-backdrop profile-map-backdrop';
   mapBackdrop.id = 'profile-map-picker';
@@ -118,12 +119,12 @@ function createProfileModal() {
   });
   document.querySelector('#profile-map-confirm').addEventListener('click', () => {
     if (!selectedProfileAddress) return;
-    form.direccion.value = selectedProfileAddress;
-    form.direccion.dataset.located = 'true';
+    profileForm.direccion.value = selectedProfileAddress;
+    profileForm.direccion.dataset.located = 'true';
     closeMap();
     showToast('Dirección seleccionada correctamente.');
   });
-  form.direccion.addEventListener('input', () => { delete form.direccion.dataset.located; });
+  profileForm.direccion.addEventListener('input', () => { delete profileForm.direccion.dataset.located; });
   backdrop.addEventListener('click', (event) => {
     if (event.target === backdrop || event.target.closest('.close-modal')) {
       backdrop.hidden = true;
