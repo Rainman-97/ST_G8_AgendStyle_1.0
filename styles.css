@@ -1262,6 +1262,55 @@ body {
   background: #31527f;
 }
 
+.risk-action {
+  background: #6f7890;
+}
+
+.risk-action:disabled {
+  cursor: wait;
+  opacity: .7;
+}
+
+.risk-result {
+  display: none;
+  gap: 4px;
+  margin-top: 10px;
+  padding: 9px 10px;
+  border-radius: 8px;
+  background: #eef3f8;
+  color: #53647c;
+  font-size: 10px;
+}
+
+.risk-result.visible {
+  display: grid;
+}
+
+.risk-result strong {
+  color: #193b69;
+}
+
+.risk-result.alto {
+  background: #fff0ed;
+}
+
+.risk-result.alto strong {
+  color: #b34b3e;
+}
+
+.risk-result.medio {
+  background: #fff8e8;
+}
+
+.risk-result.medio strong {
+  color: #9a6c17;
+}
+
+.risk-result.error {
+  background: #fff0ed;
+  color: #a6453a;
+}
+
 .chatbot-preview > div {
   display: grid;
   gap: 3px;

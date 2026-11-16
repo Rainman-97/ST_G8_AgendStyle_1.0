@@ -497,7 +497,44 @@ async function openReminderModal() {
       const time = start.toLocaleTimeString('es-CO', { hour: '2-digit', minute: '2-digit', hour12: false });
       return `<article class="pending-appointment"><div class="pending-appointment-main"><div class="client-avatar blue-avatar">${initials(cita.Cliente)}</div><div><strong>${cita.Cliente}</strong><small>${date} · ${time}</small><small>${cita.Servicio}</small></div><span class="pending-badge">Pendiente</span></div><div class="reminder-actions"><button type="button" class="reminder-action whatsapp-action" data-contact="WhatsApp">WhatsApp</button><button type="button" class="reminder-action call-action" data-contact="llamada">Llamar</button></div></article>`;
     }).join('');
+    list.querySelectorAll('.pending-appointment').forEach((card, index) => {
+      card.dataset.citaId = data.citas[index].CitaId;
+    });
+    list.querySelectorAll('.pending-appointment').forEach((card) => {
+      const citaId = card.dataset.citaId;
+      if (!citaId) return;
+      const actions = card.querySelector('.reminder-actions');
+      if (!actions) return;
+      const riskButton = document.createElement('button');
+      riskButton.type = 'button';
+      riskButton.className = 'reminder-action risk-action';
+      riskButton.textContent = 'Evaluar riesgo IA';
+      const result = document.createElement('div');
+      result.className = 'risk-result';
+      result.setAttribute('aria-live', 'polite');
+      card.appendChild(result);
+      actions.prepend(riskButton);
+      riskButton.addEventListener('click', async () => {
+        riskButton.disabled = true;
+        riskButton.textContent = 'Evaluando...';
+        try {
+          const data = await apiRequest(`/ia/citas/${citaId}/riesgo`, { method: 'POST' });
+          const prediction = data.prediccion || {};
+          const percentage = Math.round(Number(prediction.Probabilidad || 0) * 100);
+          result.innerHTML = `<strong>Riesgo ${prediction.NivelRiesgo || 'no disponible'} · ${percentage}%</strong><span>${prediction.AccionRecordatorio || 'Recordatorio estándar'}</span>`;
+          result.className = `risk-result visible ${String(prediction.NivelRiesgo || '').toLowerCase()}`;
+          riskButton.textContent = 'Actualizar riesgo IA';
+        } catch (error) {
+          result.textContent = error.message || 'No fue posible evaluar el riesgo.';
+          result.className = 'risk-result visible error';
+          riskButton.textContent = 'Reintentar riesgo IA';
+        } finally {
+          riskButton.disabled = false;
+        }
+      });
+    });
     list.querySelectorAll('.reminder-action').forEach((button) => {
+      if (button.classList.contains('risk-action')) return;
       button.addEventListener('click', () => {
         const clientName = button.closest('.pending-appointment').querySelector('strong').textContent;
         window.alert(`Recordatorio enviado por ${button.dataset.contact} a ${clientName}.`);
