@@ -17,7 +17,12 @@ async function sendTwilio(channel, phone, message) {
   if (!from) throw new Error(`Falta configurar el remitente de ${channel}.`);
 
   const to = channel === 'WhatsApp' ? `whatsapp:${phone}` : phone;
-  const body = new URLSearchParams({ To: to, From: from, Body: message });
+  // Las cuentas Trial de Twilio SMS solo aceptan plantillas predefinidas.
+  // En producción, esta variable puede cambiarse por otra plantilla permitida.
+  const content = channel === 'SMS'
+    ? (process.env.TWILIO_SMS_TEMPLATE_NAME || 'sms_appointment_reminders')
+    : message;
+  const body = new URLSearchParams({ To: to, From: from, Body: content });
   const response = await fetch(`https://api.twilio.com/2010-04-01/Accounts/${accountSid}/Messages.json`, {
     method: 'POST',
     headers: {
