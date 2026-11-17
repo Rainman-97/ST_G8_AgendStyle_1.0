@@ -59,18 +59,12 @@ El primer registro crea el negocio y asigna al propietario el rol `Administrador
 
 ```text
 Agenda_Style/
-├── index.html                         # Entrada del repositorio: redirige a auth.html
-├── dashboard.html                     # Panel visual de AgendaStyle
-├── auth.html                          # Interfaz de registro e inicio de sesión
-├── auth.css                           # Estilos y animaciones de autenticación
-├── auth.js                             # Validaciones y conexión con la API de auth
-├── reservar.html                       # Reserva pública para clientes
-├── booking.css                         # Estilos de reserva pública
-├── booking.js                          # Conexión del formulario público con la API
-├── styles.css                         # Estilos y diseño responsive
-├── script.js                          # Interacciones del prototipo
-├── Agendastyle_logo.png               # Logo principal
-├── favicon.png                        # Icono de la pestaña del navegador
+├── index.html                         # Entrada para GitHub Pages y el dominio
+├── frontend/
+│   ├── pages/                          # Páginas HTML
+│   ├── styles/                         # Hojas de estilo
+│   ├── scripts/                        # Lógica del frontend
+│   └── assets/images/                  # Logo y favicon
 ├── database/
 │   ├── 01_AgendaStyle.sql             # Base de datos, tablas, relaciones y seeds
 │   ├── 02_Usuarios_Auth.sql            # Migración para registro e inicio de sesión
@@ -273,5 +267,28 @@ Los clientes pueden reservar desde `reservar.html?negocioId=1`. El `negocioId` d
 7. Añadir autorización por roles y crear pruebas transaccionales.
 
 ## Alcance actual
+
+## OrganizaciÃ³n actual del frontend
+
+```text
+frontend/
+â”œâ”€â”€ pages/                 # PÃ¡ginas HTML de la aplicaciÃ³n
+â”‚   â”œâ”€â”€ auth.html          # Registro e inicio de sesiÃ³n
+â”‚   â”œâ”€â”€ dashboard.html     # Panel principal
+â”‚   â””â”€â”€ reservar.html       # Reserva pÃºblica de clientes
+â”œâ”€â”€ styles/                # Hojas de estilo
+â”‚   â”œâ”€â”€ auth.css
+â”‚   â”œâ”€â”€ booking.css
+â”‚   â””â”€â”€ styles.css
+â”œâ”€â”€ scripts/               # LÃ³gica del frontend
+â”‚   â”œâ”€â”€ auth.js
+â”‚   â”œâ”€â”€ booking.js
+â”‚   â””â”€â”€ script.js
+â””â”€â”€ assets/images/         # Logo e iconos
+    â”œâ”€â”€ Agendastyle_logo.png
+    â””â”€â”€ favicon.png
+```
+
+`index.html` permanece en la raÃ­z para que GitHub Pages y el dominio abran correctamente el acceso de AgendaStyle; redirige a `frontend/pages/auth.html`.
 
 El proyecto se encuentra en una etapa inicial de construcción. La base de datos y el backend ya tienen una estructura organizada, pero no se consideran terminadas las funcionalidades CRUD ni la integración completa con la interfaz.
