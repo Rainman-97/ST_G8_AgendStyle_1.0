@@ -106,6 +106,65 @@ router.get('/resumen', async (req, res) => {
   }
 });
 
+router.get('/recordatorios', async (req, res) => {
+  const negocioId = getBusinessId(req);
+  const fecha = /^\d{4}-\d{2}-\d{2}$/.test(String(req.query.fecha || ''))
+    ? String(req.query.fecha)
+    : getBogotaDate();
+
+  if (!negocioId) return res.status(403).json({ ok: false, message: 'El usuario no tiene un negocio asociado.' });
+
+  try {
+    const pool = await getConnection();
+    const result = await pool.request()
+      .input('NegocioId', sql.Int, negocioId)
+      .input('Fecha', sql.Date, fecha)
+      .query(`
+        SELECT COUNT(*) AS TotalCitas
+        FROM dbo.Citas
+        WHERE NegocioId = @NegocioId AND CAST(FechaHoraInicio AS DATE) = @Fecha AND Estado <> 'Cancelada';
+
+        SELECT COUNT(*) AS CitasConfirmadas
+        FROM dbo.Citas
+        WHERE NegocioId = @NegocioId AND CAST(FechaHoraInicio AS DATE) = @Fecha AND Estado = 'Confirmada';
+
+        SELECT COUNT(*) AS RecordatoriosEnviados
+        FROM dbo.NotificacionesCitas AS n
+        INNER JOIN dbo.Citas AS c ON c.CitaId = n.CitaId
+        WHERE c.NegocioId = @NegocioId AND CAST(c.FechaHoraInicio AS DATE) = @Fecha
+          AND CAST(n.CreadoEn AS DATE) = @Fecha AND n.Estado = 'Enviado';
+
+        SELECT COUNT(*) AS CitasPendientes
+        FROM dbo.Citas
+        WHERE NegocioId = @NegocioId AND CAST(FechaHoraInicio AS DATE) = @Fecha AND Estado = 'Pendiente';
+
+        SELECT TOP 5 n.NotificacionId, n.Canal, n.Estado, n.Proveedor, n.CreadoEn,
+          CONCAT(cl.Nombres, ' ', cl.Apellidos) AS Cliente, s.Nombre AS Servicio
+        FROM dbo.NotificacionesCitas AS n
+        INNER JOIN dbo.Citas AS c ON c.CitaId = n.CitaId
+        INNER JOIN dbo.Clientes AS cl ON cl.ClienteId = c.ClienteId
+        INNER JOIN dbo.Servicios AS s ON s.ServicioId = c.ServicioId
+        WHERE c.NegocioId = @NegocioId AND CAST(n.CreadoEn AS DATE) = @Fecha
+        ORDER BY n.CreadoEn DESC;
+      `);
+
+    const totalCitas = Number(result.recordsets[0][0]?.TotalCitas || 0);
+    const confirmadas = Number(result.recordsets[1][0]?.CitasConfirmadas || 0);
+    return res.json({
+      ok: true,
+      fecha,
+      totalCitas,
+      confirmadas,
+      enviados: Number(result.recordsets[2][0]?.RecordatoriosEnviados || 0),
+      pendientes: Number(result.recordsets[3][0]?.CitasPendientes || 0),
+      porcentajeConfirmacion: totalCitas ? Math.round((confirmadas / totalCitas) * 100) : 0,
+      ultimosEnvios: result.recordsets[4]
+    });
+  } catch (error) {
+    return res.status(500).json({ ok: false, message: 'No fue posible cargar los recordatorios.', detail: error.message });
+  }
+});
+
 router.get('/equipo', async (req, res) => {
   const negocioId = getBusinessId(req);
   const fecha = /^\d{4}-\d{2}-\d{2}$/.test(String(req.query.fecha || ''))
