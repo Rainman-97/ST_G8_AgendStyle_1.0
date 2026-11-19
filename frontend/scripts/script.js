@@ -779,6 +779,86 @@ function createChatbotModal() {
   });
 }
 
+function createSimpleModal(id, content) {
+  let backdrop = document.querySelector(`#${id}`);
+  if (backdrop) return backdrop;
+  backdrop = document.createElement('div');
+  backdrop.className = 'modal-backdrop';
+  backdrop.id = id;
+  backdrop.hidden = true;
+  backdrop.innerHTML = `<div class="modal utility-modal" role="dialog" aria-modal="true"><button class="close-modal" type="button" aria-label="Cerrar">×</button>${content}</div>`;
+  document.body.appendChild(backdrop);
+  const close = () => { backdrop.hidden = true; };
+  backdrop.querySelector('.close-modal').addEventListener('click', close);
+  backdrop.addEventListener('click', (event) => { if (event.target === backdrop) close(); });
+  return backdrop;
+}
+
+function openConfigurationModal() {
+  const modal = createSimpleModal('configuration-modal', `<p class="eyebrow">ADMINISTRACIÓN</p><h2>Configuración</h2><p class="modal-subtitle">Administra tu perfil y los accesos rápidos del negocio.</p><div class="utility-options"><button class="primary-button full" type="button" data-config-action="profile">Editar perfil y negocio</button><button class="secondary-button full" type="button" data-config-action="reminders">Gestionar recordatorios</button></div><p class="utility-note">Los envíos se realizan desde el flujo de recordatorios y quedan registrados en el negocio.</p>`);
+  if (!modal.dataset.ready) {
+    modal.dataset.ready = 'true';
+    modal.querySelector('[data-config-action="profile"]').addEventListener('click', () => { modal.hidden = true; openProfileModal(); });
+    modal.querySelector('[data-config-action="reminders"]').addEventListener('click', () => { modal.hidden = true; openReminderModal(); });
+  }
+  modal.hidden = false;
+}
+
+function openHelpModal() {
+  const modal = createSimpleModal('help-modal', `<p class="eyebrow">CENTRO DE SOPORTE</p><h2>¿Necesitas ayuda?</h2><p class="modal-subtitle">Encuentra rápidamente la acción que necesitas en AgendaStyle.</p><div class="help-list"><div><strong>Agendar una cita</strong><span>Usa “Nueva cita” y selecciona cliente, servicio y estilista.</span></div><div><strong>Enviar un recordatorio</strong><span>Abre StyloBot o Recordatorios y elige SMS para una cita pendiente.</span></div><div><strong>Soporte</strong><span>Para asistencia técnica, escribe al administrador del negocio.</span></div></div><a class="primary-button full help-mail" href="#">Contactar soporte</a>`);
+  const contact = modal.querySelector('.help-mail');
+  if (currentUser?.email) {
+    contact.href = `mailto:${currentUser.email}`;
+    contact.textContent = 'Abrir correo';
+  } else {
+    contact.removeAttribute('href');
+    contact.textContent = 'Contacta al administrador';
+  }
+  modal.hidden = false;
+}
+
+function openReportsModal() {
+  const modal = createSimpleModal('reports-modal', `<p class="eyebrow">ANÁLISIS DEL NEGOCIO</p><h2>Reportes</h2><p class="modal-subtitle">Consulta el comportamiento real de tus citas e ingresos.</p><form class="report-filter"><label>Desde<input type="date" name="desde" required></label><label>Hasta<input type="date" name="hasta" required></label><button class="primary-button" type="submit">Consultar</button></form><div class="report-summary"></div><div class="report-table-wrap"></div>`);
+  const form = modal.querySelector('.report-filter');
+  if (!modal.dataset.ready) {
+    modal.dataset.ready = 'true';
+    const today = new Date();
+    const isoToday = `${today.getFullYear()}-${String(today.getMonth() + 1).padStart(2, '0')}-${String(today.getDate()).padStart(2, '0')}`;
+    form.desde.value = `${today.getFullYear()}-${String(today.getMonth() + 1).padStart(2, '0')}-01`;
+    form.hasta.value = isoToday;
+    form.addEventListener('submit', async (event) => {
+      event.preventDefault();
+      await loadReportData(modal, form.desde.value, form.hasta.value);
+    });
+  }
+  modal.hidden = false;
+  loadReportData(modal, form.desde.value, form.hasta.value);
+}
+
+async function loadReportData(modal, desde, hasta) {
+  const summary = modal.querySelector('.report-summary');
+  const table = modal.querySelector('.report-table-wrap');
+  if (desde > hasta) {
+    summary.innerHTML = '<p class="form-message error">La fecha inicial no puede ser posterior a la fecha final.</p>';
+    table.innerHTML = '';
+    return;
+  }
+  summary.innerHTML = '<p class="empty-state">Cargando reporte...</p>';
+  table.innerHTML = '';
+  try {
+    const data = await apiRequest(`/dashboard/reportes?desde=${desde}&hasta=${hasta}`);
+    const r = data.resumen;
+    summary.innerHTML = `<div class="report-summary-grid"><div><small>Citas</small><strong>${r.totalCitas}</strong></div><div><small>Confirmadas</small><strong>${r.confirmadas}</strong></div><div><small>Atendidas</small><strong>${r.atendidas}</strong></div><div><small>Ingresos</small><strong>${formatMoney(r.ingresos)}</strong></div><div><small>Canceladas</small><strong>${r.canceladas}</strong></div></div>`;
+    if (!data.porDia.length) {
+      table.innerHTML = '<p class="empty-state">No hay datos para este rango de fechas.</p>';
+      return;
+    }
+    table.innerHTML = `<h3>Actividad por día</h3><table><thead><tr><th>Fecha</th><th>Citas</th><th>Ingresos</th></tr></thead><tbody>${data.porDia.map((row) => `<tr><td>${formatDateLabel(String(row.Fecha).slice(0, 10))}</td><td>${row.Citas}</td><td>${formatMoney(row.Ingresos)}</td></tr>`).join('')}</tbody></table><h3>Servicios más solicitados</h3><div class="report-services">${data.servicios.length ? data.servicios.map((row) => `<span><strong>${row.Servicio}</strong><small>${row.Citas} citas · ${formatMoney(row.Ingresos)}</small></span>`).join('') : '<p class="empty-state">No hay servicios registrados.</p>'}</div>`;
+  } catch (error) {
+    summary.innerHTML = `<p class="form-message error">${error.message || 'No fue posible generar el reporte.'}</p>`;
+  }
+}
+
 function setupDashboardInteractions() {
   setupUpcomingFilter();
   createAgendaModal();
@@ -817,6 +897,19 @@ function setupDashboardInteractions() {
     });
   });
 }
+
+document.addEventListener('click', (event) => {
+  const item = event.target.closest?.('.nav-item');
+  const target = item?.getAttribute('href');
+  if (target === '#reportes' || target === '#configuracion') {
+    event.preventDefault();
+    event.stopImmediatePropagation();
+    if (target === '#reportes') openReportsModal();
+    else openConfigurationModal();
+  }
+}, true);
+
+document.querySelector('.sidebar-footer')?.addEventListener('click', openHelpModal, true);
 
 function clearFakeReminderSummary() {
   const count = document.querySelector('.reminder-count');
