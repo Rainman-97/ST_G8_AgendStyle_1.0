@@ -713,6 +713,7 @@ async function openReminderModal() {
             body: JSON.stringify({ canal: button.dataset.contact })
           }).then((data) => {
             showToast(data.message || `Notificación enviada a ${clientName}.`);
+            loadReminderSummary(selectedAgendaDate);
           }).catch((error) => {
             showToast(error.message || 'No fue posible enviar la notificación.');
           }).finally(() => { button.disabled = false; });
@@ -824,6 +825,32 @@ function clearFakeReminderSummary() {
   if (count) count.textContent = 'Sin envíos registrados';
   if (progress) progress.style.width = '0%';
   if (percentage) percentage.textContent = '0%';
+}
+
+async function loadReminderSummary(date) {
+  const count = document.querySelector('.reminder-count');
+  const progress = document.querySelector('.progress-track > div');
+  const link = document.querySelector('.reminder-foot a');
+  if (link && !link.dataset.ready) {
+    link.dataset.ready = 'true';
+    link.textContent = 'Ver recordatorios →';
+    link.addEventListener('click', (event) => {
+      event.preventDefault();
+      openReminderModal();
+    });
+  }
+  try {
+    const data = await apiRequest(`/dashboard/recordatorios?fecha=${date}`);
+    const enviados = Number(data.enviados || 0);
+    const confirmacion = Number(data.porcentajeConfirmacion || 0);
+    if (count) count.textContent = enviados ? `${enviados} enviados` : 'Sin envíos registrados';
+    if (progress) progress.style.width = `${Math.min(100, confirmacion)}%`;
+    const text = document.querySelector('.reminder-foot > span');
+    if (text) text.innerHTML = `<strong>${confirmacion}%</strong> de citas confirmadas`;
+  } catch (error) {
+    clearFakeReminderSummary();
+    console.error('No se pudo cargar el resumen de recordatorios:', error);
+  }
 }
 
 function createTeamModal() {
@@ -1068,6 +1095,7 @@ async function loadDashboardData(requestedDate = null) {
       apiRequest(`/citas/?fecha=${date}`),
       apiRequest(`/dashboard/equipo?fecha=${date}`)
     ]);
+    loadReminderSummary(date);
     const cards = document.querySelectorAll('.stat-card');
     const updateCard = (index, value, detail) => {
       if (!cards[index]) return;
@@ -1090,7 +1118,6 @@ async function loadDashboardData(requestedDate = null) {
     const next = summary.proximaCita;
     updateCard(2, next ? parseAgendaDate(next.FechaHoraInicio).toLocaleTimeString('es-CO', { hour: '2-digit', minute: '2-digit', hour12: false }) : '--', next ? `${next.Cliente} · ${next.Servicio}` : 'No hay próximas citas');
     renderCalendar(date, summary.fechasConCitas);
-    clearFakeReminderSummary();
     if (calendarSelectionActive) {
       renderAppointments(agenda.citas || [], 'No hay citas registradas para esta fecha.');
     } else {
