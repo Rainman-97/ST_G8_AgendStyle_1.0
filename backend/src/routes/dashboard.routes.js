@@ -165,6 +165,74 @@ router.get('/recordatorios', async (req, res) => {
   }
 });
 
+router.get('/reportes', async (req, res) => {
+  const negocioId = getBusinessId(req);
+  const now = new Date();
+  const defaultDesde = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}-01`;
+  const defaultHasta = getBogotaDate();
+  const desde = /^\d{4}-\d{2}-\d{2}$/.test(String(req.query.desde || '')) ? String(req.query.desde) : defaultDesde;
+  const hasta = /^\d{4}-\d{2}-\d{2}$/.test(String(req.query.hasta || '')) ? String(req.query.hasta) : defaultHasta;
+
+  if (!negocioId) return res.status(403).json({ ok: false, message: 'El usuario no tiene un negocio asociado.' });
+
+  try {
+    const pool = await getConnection();
+    const result = await pool.request()
+      .input('NegocioId', sql.Int, negocioId)
+      .input('Desde', sql.Date, desde)
+      .input('Hasta', sql.Date, hasta)
+      .query(`
+        SELECT
+          COUNT(*) AS TotalCitas,
+          SUM(CASE WHEN c.Estado = 'Confirmada' THEN 1 ELSE 0 END) AS Confirmadas,
+          SUM(CASE WHEN c.Estado = 'Cancelada' THEN 1 ELSE 0 END) AS Canceladas,
+          SUM(CASE WHEN c.Estado = 'Atendida' THEN 1 ELSE 0 END) AS Atendidas,
+          COALESCE(SUM(CASE WHEN c.Estado NOT IN ('Cancelada', 'No asistió') THEN s.Precio ELSE 0 END), 0) AS Ingresos
+        FROM dbo.Citas AS c
+        INNER JOIN dbo.Servicios AS s ON s.ServicioId = c.ServicioId
+        WHERE c.NegocioId = @NegocioId
+          AND CAST(c.FechaHoraInicio AS DATE) BETWEEN @Desde AND @Hasta;
+
+        SELECT CAST(c.FechaHoraInicio AS DATE) AS Fecha,
+          COUNT(*) AS Citas,
+          COALESCE(SUM(CASE WHEN c.Estado NOT IN ('Cancelada', 'No asistió') THEN s.Precio ELSE 0 END), 0) AS Ingresos
+        FROM dbo.Citas AS c
+        INNER JOIN dbo.Servicios AS s ON s.ServicioId = c.ServicioId
+        WHERE c.NegocioId = @NegocioId
+          AND CAST(c.FechaHoraInicio AS DATE) BETWEEN @Desde AND @Hasta
+        GROUP BY CAST(c.FechaHoraInicio AS DATE)
+        ORDER BY Fecha;
+
+        SELECT TOP 5 s.Nombre AS Servicio, COUNT(*) AS Citas,
+          COALESCE(SUM(CASE WHEN c.Estado NOT IN ('Cancelada', 'No asistió') THEN s.Precio ELSE 0 END), 0) AS Ingresos
+        FROM dbo.Citas AS c
+        INNER JOIN dbo.Servicios AS s ON s.ServicioId = c.ServicioId
+        WHERE c.NegocioId = @NegocioId
+          AND CAST(c.FechaHoraInicio AS DATE) BETWEEN @Desde AND @Hasta
+        GROUP BY s.Nombre
+        ORDER BY Citas DESC, Ingresos DESC;
+      `);
+
+    const resumen = result.recordsets[0][0] || {};
+    return res.json({
+      ok: true,
+      desde,
+      hasta,
+      resumen: {
+        totalCitas: Number(resumen.TotalCitas || 0),
+        confirmadas: Number(resumen.Confirmadas || 0),
+        canceladas: Number(resumen.Canceladas || 0),
+        atendidas: Number(resumen.Atendidas || 0),
+        ingresos: Number(resumen.Ingresos || 0)
+      },
+      porDia: result.recordsets[1],
+      servicios: result.recordsets[2]
+    });
+  } catch (error) {
+    return res.status(500).json({ ok: false, message: 'No fue posible generar el reporte.', detail: error.message });
+  }
+});
+
 router.get('/equipo', async (req, res) => {
   const negocioId = getBusinessId(req);
   const fecha = /^\d{4}-\d{2}-\d{2}$/.test(String(req.query.fecha || ''))
