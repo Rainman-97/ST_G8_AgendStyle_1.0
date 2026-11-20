@@ -12,7 +12,7 @@ BEGIN
     (
         NegocioId        INT IDENTITY(1,1) NOT NULL,
         NombreComercial  NVARCHAR(120) NOT NULL,
-        TipoNegocio      VARCHAR(20) NOT NULL,
+        TipoNegocio      VARCHAR(30) NOT NULL,
         Telefono         VARCHAR(20) NOT NULL,
         Direccion        NVARCHAR(180) NULL,
         Email            VARCHAR(150) NULL,
