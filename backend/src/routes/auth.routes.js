@@ -110,7 +110,7 @@ router.post('/register', async (req, res) => {
     try {
       const businessResult = await new sql.Request(transaction)
         .input('NombreComercial', sql.NVarChar(120), String(negocio.nombreComercial).trim())
-        .input('TipoNegocio', sql.VarChar(20), String(negocio.tipoNegocio).trim())
+        .input('TipoNegocio', sql.VarChar(30), String(negocio.tipoNegocio).trim())
         .input('TelefonoNegocio', sql.VarChar(20), String(negocio.telefono).trim())
         .input('Direccion', sql.NVarChar(180), negocio.direccion ? String(negocio.direccion).trim() : null)
         .input('EmailNegocio', sql.VarChar(150), negocio.email ? normalizeEmail(negocio.email) : null)
