@@ -12,7 +12,8 @@ const migrationFiles = [
   '08_Disponibilidad_Estilistas.sql',
   '09_IA_Riesgo_Inasistencia.sql',
   '10_Recuperacion_Clave.sql',
-  '11_Notificaciones_Citas.sql'
+  '11_Notificaciones_Citas.sql',
+  '12_Ampliar_Tipo_Negocio.sql'
 ];
 
 async function runMigrations() {
